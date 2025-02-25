@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,43 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+        wedrose: {
+          50: '#fff5f7',
+          100: '#ffeaef',
+          200: '#ffcbd6',
+          300: '#ffa2b6',
+          400: '#ff6d8e',
+          500: '#ff4572',
+          600: '#e71c50',
+          700: '#c20e42',
+          800: '#a00e3a',
+          900: '#841234',
+        },
+        wedgold: {
+          50: '#fdf9e8',
+          100: '#fbf4d1',
+          200: '#f7e8a3',
+          300: '#f3d76b',
+          400: '#efc53f',
+          500: '#e9b11a',
+          600: '#cc9014',
+          700: '#a96e12',
+          800: '#8a5714',
+          900: '#734816',
+        },
+        wedneutral: {
+          50: '#f9f9f8',
+          100: '#f1f0ee',
+          200: '#e2e0dc',
+          300: '#ccc8c0',
+          400: '#b2aca1',
+          500: '#9b9385',
+          600: '#867d6f',
+          700: '#6e665b',
+          800: '#5c554c',
+          900: '#4d4841',
+        }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,12 +121,36 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        'slide-up': {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        'slide-down': {
+          '0%': { transform: 'translateY(-20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        'slide-in-right': {
+          '0%': { transform: 'translateX(20px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' }
+        }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in': 'fade-in 0.6s ease-out',
+        'slide-up': 'slide-up 0.6s ease-out',
+        'slide-down': 'slide-down 0.6s ease-out',
+        'slide-in-right': 'slide-in-right 0.6s ease-out'
+			},
+      fontFamily: {
+        serif: ['Playfair Display', 'serif'],
+        sans: ['Inter', 'sans-serif']
+      }
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
