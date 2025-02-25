@@ -57,19 +57,111 @@ const ChatbotModal = ({ open, setOpen }: ChatbotModalProps) => {
     setTimeout(() => {
       const botResponses: { [key: string]: string } = {
         "wedding": "A wedding is a ceremony where two people are united in marriage. Wedding traditions and customs vary greatly between cultures, ethnic groups, religions, countries, and social classes.",
-        "venue": "When choosing a wedding venue, consider your budget, guest count, location convenience, and whether it matches your wedding vision. Visit multiple venues before making
+        "venue": "When choosing a wedding venue, consider your budget, guest count, location convenience, and whether it matches your wedding vision. Visit multiple venues before making a decision.",
+        "budget": "Creating a wedding budget is essential. Start by determining your total available funds, then allocate percentages to different categories like venue, catering, attire, etc. Always include a buffer of 10-15% for unexpected expenses.",
+        "traditions": "Wedding traditions vary across cultures. Some common ones include something old, new, borrowed and blue; the first dance; cutting the cake together; and tossing the bouquet.",
+        "dress": "When shopping for a wedding dress, start 9-12 months before the wedding. Consider your venue, the season, and your personal style. Bring a trusted friend or family member, and don't forget to set a budget before shopping.",
+      };
 
-If there's knowledge, context or custom instructions you want to include in every edit in this project, set it below.
+      // Find if any keywords are in the input
+      const lowerInput = input.toLowerCase();
+      let response = "I'm not sure how to help with that specific question. Could you try asking about wedding venues, budgeting, traditions, or dresses?";
+      
+      Object.keys(botResponses).forEach(key => {
+        if (lowerInput.includes(key)) {
+          response = botResponses[key];
+        }
+      });
 
-<lov-actions>
-<lov-knowledge>
-</lov-actions>
+      const botMessage: Message = {
+        content: response,
+        sender: "bot",
+        timestamp: new Date(),
+      };
 
-Given your project's requirements (chatbot, vendor matching, full-stack planning), integrating Supabase for user authentication, data storage (wedding details, vendor information, user preferences), and potentially AI features for the chatbot would be highly beneficial.  You can use the Supabase menu to connect your project.
-<lov-actions>
-<lov-message-prompt message="Tell me more about Supabase">Learn more about Supabase</lov-message-prompt>
-</lov-actions>
+      setMessages((prev) => [...prev, botMessage]);
+      setLoading(false);
+    }, 1000);
+  };
 
-<lov-actions>
-<lov-link url="https://docs.lovable.dev/">Visit docs</lov-link>
-</lov-actions>
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSend();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-wedrose-500" />
+            <span>Wedding Wisdom Assistant</span>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex flex-col space-y-4 max-h-[60vh] overflow-y-auto p-4 -mx-4">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                "flex flex-col space-y-2 text-sm max-w-[80%] rounded-lg p-4",
+                message.sender === "user"
+                  ? "ml-auto bg-wedrose-100 text-wedrose-900"
+                  : "bg-muted"
+              )}
+            >
+              <div>{message.content}</div>
+              <div
+                className={cn(
+                  "text-xs",
+                  message.sender === "user"
+                    ? "text-wedrose-600"
+                    : "text-wedneutral-500"
+                )}
+              >
+                {message.timestamp.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex flex-col space-y-2 text-sm max-w-[80%] rounded-lg p-4 bg-muted">
+              <div className="flex space-x-2">
+                <div className="h-2 w-2 rounded-full bg-wedneutral-400 animate-bounce" />
+                <div className="h-2 w-2 rounded-full bg-wedneutral-400 animate-bounce" style={{ animationDelay: "0.2s" }} />
+                <div className="h-2 w-2 rounded-full bg-wedneutral-400 animate-bounce" style={{ animationDelay: "0.4s" }} />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <DialogFooter className="flex sm:justify-between">
+          <div className="flex items-center w-full gap-2">
+            <Input
+              placeholder="Type your question..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1"
+            />
+            <Button 
+              type="submit" 
+              size="icon"
+              onClick={handleSend}
+              disabled={loading || input.trim() === ""}
+              className="bg-wedrose-500 hover:bg-wedrose-600 text-white"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default ChatbotModal;
