@@ -1,184 +1,279 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
-import { Card, CardHeader, CardContent } from '../components/ui/card';
-import { Loader2, BookOpen } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Loader2, Calendar, MapPin, Clock, User, Phone, Mail, Edit3, Save, X } from 'lucide-react';
+import { useAuth } from '../hooks/useAuthContext';
+import { toast } from '../hooks/use-toast';
 import StaffDashboardLayout from '../components/staff/StaffDashboardLayout';
-import { useAuth } from '@/hooks/useAuthContext';
-import { Badge } from '@/components/ui/badge';
 
 interface Booking {
   booking_id: string;
+  user_id: string;
   event_date: string;
   booking_status: string;
-  total_amount: number;
-  notes_for_vendor: string;
+  notes_for_vendor: string | null;
+  total_amount: number | null;
+  advance_amount_due: number | null;
+  paid_amount: number | null;
   created_at: string;
-  users: {
-    display_name: string;
-    email: string;
-  };
+  notes_for_user: string | null;
 }
 
 const StaffBookings: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, staffProfile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [editingBooking, setEditingBooking] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    notes_for_user: '',
+    booking_status: ''
+  });
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      navigate('/staff/login', { replace: true });
-      return;
+    if (user && staffProfile) {
+      fetchBookings();
     }
+  }, [user, staffProfile]);
 
-    const fetchBookings = async () => {
+  const fetchBookings = async () => {
+    if (!staffProfile?.vendor_id) return;
+
+    try {
       setLoading(true);
-      setError(null);
-      try {
-        const { data: staffData, error: staffError } = await supabase
-          .from('vendor_staff')
-          .select('vendor_id')
-          .eq('supabase_auth_uid', user.id)
-          .single();
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('vendor_id', staffProfile.vendor_id)
+        .order('event_date', { ascending: true });
 
-        if (staffError) throw staffError;
-        if (!staffData || !staffData.vendor_id) {
-          setError('Staff profile not found or not associated with a vendor.');
-          setLoading(false);
-          return;
-        }
+      if (error) throw error;
+      setBookings(data || []);
+    } catch (error: any) {
+      console.error('Error fetching bookings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load bookings',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const { data, error: bookingsError } = await supabase
-          .from('bookings')
-          .select(`
-            booking_id,
-            event_date,
-            booking_status,
-            total_amount,
-            notes_for_vendor,
-            created_at,
-            users (
-              display_name,
-              email
-            )
-          `)
-          .eq('vendor_id', staffData.vendor_id)
-          .order('event_date', { ascending: true });
+  const handleEditBooking = (booking: Booking) => {
+    setEditingBooking(booking.booking_id);
+    setEditForm({
+      notes_for_user: booking.notes_for_user || '',
+      booking_status: booking.booking_status
+    });
+  };
 
-        if (bookingsError) throw bookingsError;
-        setBookings(data as unknown as Booking[] || []);
+  const handleSaveBooking = async (bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          notes_for_user: editForm.notes_for_user,
+          booking_status: editForm.booking_status
+        })
+        .eq('booking_id', bookingId);
 
-      } catch (err: any) {
-        console.error('Error fetching bookings:', err);
-        setError(err.message || 'Failed to load bookings.');
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (error) throw error;
 
-    fetchBookings();
-  }, [user, authLoading, navigate]);
+      setBookings(prev => prev.map(booking => 
+        booking.booking_id === bookingId 
+          ? { ...booking, notes_for_user: editForm.notes_for_user, booking_status: editForm.booking_status }
+          : booking
+      ));
+
+      setEditingBooking(null);
+      toast({
+        title: 'Success',
+        description: 'Booking updated successfully'
+      });
+    } catch (error: any) {
+      console.error('Error updating booking:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update booking',
+        variant: 'destructive'
+      });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'bg-sanskara-green/20 text-sanskara-green';
-      case 'pending_confirmation': return 'bg-sanskara-amber/20 text-sanskara-amber';
-      case 'cancelled': return 'bg-sanskara-red/20 text-sanskara-red';
+      case 'confirmed': return 'bg-green-100 text-green-800';
+      case 'pending_confirmation': return 'bg-yellow-100 text-yellow-800';
+      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const renderContent = () => {
-    if (loading || authLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
-          <Loader2 className="h-12 w-12 animate-spin text-sanskara-red" />
-          <p className="mt-4 text-lg text-muted-foreground">Loading bookings...</p>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)] text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-        </div>
-      );
-    }
-
-    return (
-      <Card className="w-full max-w-5xl mx-auto">
-        <CardHeader>
-          <div className="flex items-center space-x-3">
-            <BookOpen className="h-8 w-8 text-sanskara-blue" />
-            <h1 className="text-2xl font-semibold text-gray-700">Vendor Bookings</h1>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            All bookings for your vendor. Manage and track booking status.
-          </p>
-        </CardHeader>
-        <CardContent>
-          {bookings.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {bookings.map(booking => (
-                    <tr key={booking.booking_id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {booking.users?.display_name || 'N/A'}
-                        </div>
-                        <div className="text-sm text-gray-500">{booking.users?.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(booking.event_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={`${getStatusColor(booking.booking_status)} text-xs`}>
-                          {booking.booking_status}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {booking.total_amount ? `₹${booking.total_amount.toLocaleString()}` : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={booking.notes_for_vendor || undefined}>
-                        {booking.notes_for_vendor || 'No notes'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-gray-500">No bookings found for your vendor.</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Bookings will appear here once customers start booking your services.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
+
+  if (loading) {
+    return (
+      <StaffDashboardLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading bookings...</span>
+        </div>
+      </StaffDashboardLayout>
+    );
+  }
 
   return (
     <StaffDashboardLayout>
-      {renderContent()}
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Bookings Management</h1>
+          <p className="text-muted-foreground">Manage and track all vendor bookings</p>
+        </div>
+
+        <div className="grid gap-6">
+          {bookings.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Bookings Found</h3>
+                <p className="text-muted-foreground text-center">
+                  Your vendor doesn't have any bookings yet. They'll appear here when customers book your services.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            bookings.map((booking) => (
+              <Card key={booking.booking_id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        Booking #{booking.booking_id.substring(0, 8)}
+                      </CardTitle>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {formatDate(booking.event_date)}
+                        </span>
+                        <Badge className={getStatusColor(booking.booking_status)}>
+                          {booking.booking_status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {editingBooking === booking.booking_id ? (
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => handleSaveBooking(booking.booking_id)}>
+                          <Save className="h-4 w-4 mr-1" />
+                          Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingBooking(null)}>
+                          <X className="h-4 w-4 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking)}>
+                        <Edit3 className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Customer Information</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Customer ID: {booking.user_id.substring(0, 8)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium mb-2">Financial Details</h4>
+                      <div className="space-y-1 text-sm">
+                        {booking.total_amount && (
+                          <div>Total Amount: ₹{booking.total_amount.toLocaleString()}</div>
+                        )}
+                        {booking.advance_amount_due && (
+                          <div>Advance Due: ₹{booking.advance_amount_due.toLocaleString()}</div>
+                        )}
+                        {booking.paid_amount && (
+                          <div>Paid Amount: ₹{booking.paid_amount.toLocaleString()}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {booking.notes_for_vendor && (
+                    <div>
+                      <h4 className="font-medium mb-2">Customer Notes</h4>
+                      <p className="text-sm bg-gray-50 p-3 rounded-md">{booking.notes_for_vendor}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="font-medium mb-2">Status & Notes</h4>
+                    {editingBooking === booking.booking_id ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium">Status</label>
+                          <select
+                            value={editForm.booking_status}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, booking_status: e.target.value }))}
+                            className="w-full mt-1 border rounded-md px-3 py-2"
+                          >
+                            <option value="pending_confirmation">Pending Confirmation</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Notes for Customer</label>
+                          <Textarea
+                            value={editForm.notes_for_user}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, notes_for_user: e.target.value }))}
+                            placeholder="Add notes for the customer..."
+                            className="mt-1"
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {booking.notes_for_user ? (
+                          <p className="text-sm bg-blue-50 p-3 rounded-md">{booking.notes_for_user}</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">No notes for customer</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
     </StaffDashboardLayout>
   );
 };

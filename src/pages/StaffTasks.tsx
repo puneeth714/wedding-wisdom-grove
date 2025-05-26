@@ -1,250 +1,436 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Card, CardHeader, CardContent } from '../components/ui/card';
-import { Loader2, CheckSquare, Square, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
+import { Loader2, Plus, Calendar, Edit3, Save, X, Trash2 } from 'lucide-react';
+import { useAuth } from '../hooks/useAuthContext';
+import { toast } from '../hooks/use-toast';
 import StaffDashboardLayout from '../components/staff/StaffDashboardLayout';
-import { useAuth } from '@/hooks/useAuthContext';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface VendorTask {
   vendor_task_id: string;
   title: string;
   description: string | null;
   due_date: string | null;
+  priority: string;
   status: string;
-  priority: string | null;
-  booking_id: string | null;
-  bookings: {
-    event_date: string | null;
-  } | null;
+  is_complete: boolean;
+  category: string | null;
+  booking_id: string;
+  created_at: string;
 }
 
-const taskStatusOptions = ["Pending", "In Progress", "Completed", "Blocked"];
-
 const StaffTasks: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, staffProfile } = useAuth();
   const [tasks, setTasks] = useState<VendorTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    due_date: '',
+    priority: 'medium',
+    category: '',
+    booking_id: ''
+  });
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      navigate('/staff/login', { replace: true });
-      return;
+    if (user && staffProfile) {
+      fetchTasks();
     }
+  }, [user, staffProfile]);
 
-    const fetchStaffAndTasks = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data: staffData, error: staffError } = await supabase
-          .from('vendor_staff')
-          .select('staff_id')
-          .eq('supabase_auth_uid', user.id)
-          .single();
+  const fetchTasks = async () => {
+    if (!staffProfile?.staff_id) return;
 
-        if (staffError) throw staffError;
-        if (!staffData) {
-          setError('Staff profile not found.');
-          setLoading(false);
-          return;
-        }
-
-        let query = supabase
-          .from('vendor_tasks')
-          .select('*, bookings(event_date)')
-          .eq('assigned_staff_id', staffData.staff_id);
-
-        if (statusFilter !== "all") {
-          query = query.eq('status', statusFilter);
-        }
-        
-        query = query.order('due_date', { ascending: true, nullsFirst: false });
-
-        const { data: tasksData, error: tasksError } = await query;
-
-        if (tasksError) throw tasksError;
-        setTasks(tasksData as VendorTask[] || []);
-
-      } catch (fetchError: any) {
-        console.error('Error fetching staff tasks:', fetchError);
-        setError(fetchError.message || 'Failed to load tasks.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStaffAndTasks();
-  }, [user, authLoading, navigate, statusFilter]);
-
-  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
-    setLoading(true);
     try {
-      const { error: updateError } = await supabase
+      setLoading(true);
+      const { data, error } = await supabase
         .from('vendor_tasks')
-        .update({ status: newStatus })
-        .eq('vendor_task_id', taskId);
+        .select('*')
+        .eq('assigned_staff_id', staffProfile.staff_id)
+        .order('due_date', { ascending: true });
 
-      if (updateError) throw updateError;
-
-      setTasks(prevTasks => prevTasks.map(task => 
-        task.vendor_task_id === taskId ? { ...task, status: newStatus } : task
-      ));
-    } catch (err: any) {
-      console.error('Error updating task status:', err);
-      setError(err.message || 'Failed to update task.');
+      if (error) throw error;
+      setTasks(data || []);
+    } catch (error: any) {
+      console.error('Error fetching tasks:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load tasks',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
   };
-  
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Completed': return 'bg-sanskara-green/20 text-sanskara-green';
-      case 'In Progress': return 'bg-sanskara-blue/20 text-sanskara-blue';
-      case 'Pending': return 'bg-sanskara-amber/20 text-sanskara-amber';
-      case 'Blocked': return 'bg-sanskara-red/20 text-sanskara-red';
+
+  const handleCreateTask = async () => {
+    if (!staffProfile?.vendor_id || !editForm.title) return;
+
+    try {
+      const { error } = await supabase
+        .from('vendor_tasks')
+        .insert({
+          vendor_id: staffProfile.vendor_id,
+          assigned_staff_id: staffProfile.staff_id,
+          title: editForm.title,
+          description: editForm.description || null,
+          due_date: editForm.due_date || null,
+          priority: editForm.priority,
+          category: editForm.category || null,
+          booking_id: editForm.booking_id
+        });
+
+      if (error) throw error;
+
+      await fetchTasks();
+      setShowCreateForm(false);
+      setEditForm({
+        title: '',
+        description: '',
+        due_date: '',
+        priority: 'medium',
+        category: '',
+        booking_id: ''
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Task created successfully'
+      });
+    } catch (error: any) {
+      console.error('Error creating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleEditTask = (task: VendorTask) => {
+    setEditingTask(task.vendor_task_id);
+    setEditForm({
+      title: task.title,
+      description: task.description || '',
+      due_date: task.due_date || '',
+      priority: task.priority,
+      category: task.category || '',
+      booking_id: task.booking_id
+    });
+  };
+
+  const handleSaveTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('vendor_tasks')
+        .update({
+          title: editForm.title,
+          description: editForm.description || null,
+          due_date: editForm.due_date || null,
+          priority: editForm.priority,
+          category: editForm.category || null
+        })
+        .eq('vendor_task_id', taskId);
+
+      if (error) throw error;
+
+      await fetchTasks();
+      setEditingTask(null);
+      toast({
+        title: 'Success',
+        description: 'Task updated successfully'
+      });
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleToggleComplete = async (taskId: string, isComplete: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('vendor_tasks')
+        .update({
+          is_complete: !isComplete,
+          status: !isComplete ? 'Completed' : 'To Do'
+        })
+        .eq('vendor_task_id', taskId);
+
+      if (error) throw error;
+
+      setTasks(prev => prev.map(task => 
+        task.vendor_task_id === taskId 
+          ? { ...task, is_complete: !isComplete, status: !isComplete ? 'Completed' : 'To Do' }
+          : task
+      ));
+
+      toast({
+        title: 'Success',
+        description: `Task marked as ${!isComplete ? 'completed' : 'incomplete'}`
+      });
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('vendor_tasks')
+        .delete()
+        .eq('vendor_task_id', taskId);
+
+      if (error) throw error;
+
+      setTasks(prev => prev.filter(task => task.vendor_task_id !== taskId));
+      toast({
+        title: 'Success',
+        description: 'Task deleted successfully'
+      });
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'urgent': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getPriorityIcon = (priority: string | null) => {
-    switch (priority) {
-      case 'High': return <AlertTriangle className="h-4 w-4 text-sanskara-red mr-1" />;
-      case 'Medium': return <AlertTriangle className="h-4 w-4 text-sanskara-amber mr-1" />;
-      case 'Low': return <CheckSquare className="h-4 w-4 text-sanskara-green mr-1" />;
-      default: return <Square className="h-4 w-4 text-gray-400 mr-1"/>;
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
   };
 
-  const renderContent = () => {
-    if (loading && tasks.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
-          <Loader2 className="h-12 w-12 animate-spin text-sanskara-red" />
-          <p className="ml-2 mt-4 text-lg text-muted-foreground">Loading tasks...</p>
-        </div>
-      );
-    }
-  
-    if (error && tasks.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
-          <p className="text-red-600 mb-4 text-center">{error}</p>
-        </div>
-      );
-    }
-
+  if (loading) {
     return (
-      <Card className="w-full max-w-5xl mx-auto">
-        <CardHeader>
-           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-            <h1 className="text-2xl font-semibold text-gray-700">My Assigned Tasks</h1>
-            <div className="w-full sm:w-48">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {taskStatusOptions.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Tasks assigned to you. Use the filter to narrow down by status.
-          </p>
-           {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {tasks.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking Event</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {tasks.map(task => (
-                    <tr key={task.vendor_task_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{task.title}</div>
-                        {task.description && <div className="text-xs text-gray-500 truncate max-w-xs" title={task.description}>{task.description}</div>}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 flex items-center">
-                        {getPriorityIcon(task.priority)} {task.priority || 'N/A'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <Badge className={`${getStatusColor(task.status)} text-xs`}>{task.status}</Badge>
-                      </td>
-                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {task.booking_id ? (
-                          <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => navigate(`/staff/bookings/${task.booking_id}`)}>
-                            Event: {task.bookings?.event_date ? new Date(task.bookings.event_date).toLocaleDateString() : task.booking_id}
-                            <ExternalLink className="ml-1 h-3 w-3" />
-                          </Button>
-                        ) : 'N/A'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        <Select 
-                          value={task.status} 
-                          onValueChange={(newStatus) => handleUpdateTaskStatus(task.vendor_task_id, newStatus)}
-                          disabled={loading}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-36">
-                            <SelectValue placeholder="Change status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {taskStatusOptions.map(option => (
-                              <SelectItem key={option} value={option} className="text-xs">{option}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-700 text-center py-10">
-              {statusFilter === "all" ? "You have no tasks assigned." : `No tasks found with status: ${statusFilter}.`}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <StaffDashboardLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading tasks...</span>
+        </div>
+      </StaffDashboardLayout>
     );
-  };
+  }
 
   return (
     <StaffDashboardLayout>
-      {renderContent()}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">My Tasks</h1>
+            <p className="text-muted-foreground">Manage your assigned tasks and workload</p>
+          </div>
+          <Button onClick={() => setShowCreateForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Task
+          </Button>
+        </div>
+
+        {/* Create Task Form */}
+        {showCreateForm && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Task</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Title *</label>
+                  <Input
+                    value={editForm.title}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Task title"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Due Date</label>
+                  <Input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, due_date: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Priority</label>
+                  <select
+                    value={editForm.priority}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, priority: e.target.value }))}
+                    className="w-full mt-1 border rounded-md px-3 py-2"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Category</label>
+                  <Input
+                    value={editForm.category}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                    placeholder="Task category"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Task description"
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button onClick={handleCreateTask}>Create Task</Button>
+                <Button variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tasks List */}
+        <div className="grid gap-4">
+          {tasks.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Tasks Found</h3>
+                <p className="text-muted-foreground text-center">
+                  You don't have any tasks assigned yet. Create your first task to get started.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            tasks.map((task) => (
+              <Card key={task.vendor_task_id} className={task.is_complete ? 'opacity-60' : ''}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Checkbox
+                        checked={task.is_complete}
+                        onCheckedChange={() => handleToggleComplete(task.vendor_task_id, task.is_complete)}
+                        className="mt-1"
+                      />
+                      
+                      <div className="flex-1">
+                        {editingTask === task.vendor_task_id ? (
+                          <div className="space-y-3">
+                            <Input
+                              value={editForm.title}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                              className="font-medium"
+                            />
+                            <Textarea
+                              value={editForm.description}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="Task description"
+                              rows={2}
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                type="date"
+                                value={editForm.due_date}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, due_date: e.target.value }))}
+                              />
+                              <select
+                                value={editForm.priority}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, priority: e.target.value }))}
+                                className="border rounded-md px-3 py-2"
+                              >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                              </select>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <h3 className={`font-medium ${task.is_complete ? 'line-through' : ''}`}>
+                              {task.title}
+                            </h3>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                              {task.due_date && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(task.due_date)}
+                                </span>
+                              )}
+                              {task.category && (
+                                <Badge variant="outline">{task.category}</Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-1 ml-4">
+                      {editingTask === task.vendor_task_id ? (
+                        <>
+                          <Button size="sm" onClick={() => handleSaveTask(task.vendor_task_id)}>
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingTask(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => handleEditTask(task)}>
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeleteTask(task.vendor_task_id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
     </StaffDashboardLayout>
   );
 };
