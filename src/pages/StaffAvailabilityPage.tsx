@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StaffDashboardLayout from '../components/staff/StaffDashboardLayout';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { Card, CardHeader, CardContent } from '../components/ui/card';
 import { CalendarDays, Loader2 } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuthContext';
@@ -10,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 interface AvailabilityRecord {
   availability_id: string;
   available_date: string;
-  status: 'available' | 'booked_tentative' | 'booked_confirmed' | 'unavailable_custom' | string; // Allow for other statuses
+  status: 'available' | 'booked_tentative' | 'booked_confirmed' | 'unavailable_custom' | string;
   notes: string | null;
 }
 
@@ -69,7 +70,7 @@ const StaffAvailabilityPage: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available': return 'bg-sanskara-green/20 text-sanskara-green';
-      case 'booked_tentative': return 'bg-sanskara-amber/30 text-sanskara-amber'; // Lighter amber for tentative
+      case 'booked_tentative': return 'bg-sanskara-amber/30 text-sanskara-amber';
       case 'booked_confirmed': return 'bg-sanskara-orange/20 text-sanskara-orange'; 
       case 'unavailable_custom': return 'bg-sanskara-red/20 text-sanskara-red';
       default: return 'bg-gray-100 text-gray-800';
@@ -99,9 +100,7 @@ const StaffAvailabilityPage: React.FC = () => {
         <CardHeader>
           <div className="flex items-center space-x-3">
             <CalendarDays className="h-8 w-8 text-sanskara-blue" />
-            <CardTitle asChild>
-              <h1 className="text-2xl font-semibold text-gray-700">Vendor Availability Records</h1>
-            </CardTitle>
+            <h1 className="text-2xl font-semibold text-gray-700">Vendor Availability Records</h1>
           </div>
            <p className="text-sm text-muted-foreground mt-1">
             List of all availability records for your vendor. Full calendar view coming soon.

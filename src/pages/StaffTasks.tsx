@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
@@ -6,14 +7,14 @@ import { Card, CardHeader, CardContent } from '../components/ui/card';
 import { Loader2, CheckSquare, Square, AlertTriangle, ExternalLink } from 'lucide-react';
 import StaffDashboardLayout from '../components/staff/StaffDashboardLayout';
 import { useAuth } from '@/hooks/useAuthContext';
-import { Badge } from '@/components/ui/badge'; // For status display
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; // For status filter
+} from "@/components/ui/select";
 
 interface VendorTask {
   vendor_task_id: string;
@@ -21,16 +22,14 @@ interface VendorTask {
   description: string | null;
   due_date: string | null;
   status: string;
-  priority: string | null; // Added priority
-  booking_id: string | null; // Can be null
-  bookings: { // For displaying event date from related booking
+  priority: string | null;
+  booking_id: string | null;
+  bookings: {
     event_date: string | null;
   } | null;
 }
 
 const taskStatusOptions = ["Pending", "In Progress", "Completed", "Blocked"];
-const taskPriorityOptions = ["Low", "Medium", "High"];
-
 
 const StaffTasks: React.FC = () => {
   const navigate = useNavigate();
@@ -67,7 +66,7 @@ const StaffTasks: React.FC = () => {
 
         let query = supabase
           .from('vendor_tasks')
-          .select('*, bookings(event_date)') // Fetch related booking event_date
+          .select('*, bookings(event_date)')
           .eq('assigned_staff_id', staffData.staff_id);
 
         if (statusFilter !== "all") {
@@ -93,7 +92,7 @@ const StaffTasks: React.FC = () => {
   }, [user, authLoading, navigate, statusFilter]);
 
   const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
-    setLoading(true); // Indicate loading state for the specific update action
+    setLoading(true);
     try {
       const { error: updateError } = await supabase
         .from('vendor_tasks')
@@ -102,24 +101,21 @@ const StaffTasks: React.FC = () => {
 
       if (updateError) throw updateError;
 
-      // Refetch tasks to show updated status or update locally
       setTasks(prevTasks => prevTasks.map(task => 
         task.vendor_task_id === taskId ? { ...task, status: newStatus } : task
       ));
-      // Or trigger a full refetch:
-      // const event = new Event('staleData'); window.dispatchEvent(event); // if using a global state/effect
     } catch (err: any) {
       console.error('Error updating task status:', err);
-      setError(err.message || 'Failed to update task.'); // Show error specific to this action
+      setError(err.message || 'Failed to update task.');
     } finally {
-      setLoading(false); // Reset loading state for the update action
+      setLoading(false);
     }
   };
   
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Completed': return 'bg-sanskara-green/20 text-sanskara-green';
-      case 'In Progress': return 'bg-sanskara-blue/20 text-sanskara-blue'; // Using sanskara-blue
+      case 'In Progress': return 'bg-sanskara-blue/20 text-sanskara-blue';
       case 'Pending': return 'bg-sanskara-amber/20 text-sanskara-amber';
       case 'Blocked': return 'bg-sanskara-red/20 text-sanskara-red';
       default: return 'bg-gray-100 text-gray-800';
@@ -136,7 +132,7 @@ const StaffTasks: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (loading && tasks.length === 0) { // Show full page loader only on initial load
+    if (loading && tasks.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
           <Loader2 className="h-12 w-12 animate-spin text-sanskara-red" />
@@ -145,7 +141,7 @@ const StaffTasks: React.FC = () => {
       );
     }
   
-    if (error && tasks.length === 0) { // Show full page error if initial load fails
+    if (error && tasks.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
           <p className="text-red-600 mb-4 text-center">{error}</p>
@@ -209,7 +205,7 @@ const StaffTasks: React.FC = () => {
                       </td>
                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                         {task.booking_id ? (
-                          <Button variant="link" size="xs" className="p-0 h-auto text-xs" onClick={() => navigate(`/staff/bookings/${task.booking_id}`)}>
+                          <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => navigate(`/staff/bookings/${task.booking_id}`)}>
                             Event: {task.bookings?.event_date ? new Date(task.bookings.event_date).toLocaleDateString() : task.booking_id}
                             <ExternalLink className="ml-1 h-3 w-3" />
                           </Button>
@@ -219,7 +215,7 @@ const StaffTasks: React.FC = () => {
                         <Select 
                           value={task.status} 
                           onValueChange={(newStatus) => handleUpdateTaskStatus(task.vendor_task_id, newStatus)}
-                          disabled={loading} // Disable select while any task update is loading
+                          disabled={loading}
                         >
                           <SelectTrigger className="h-8 text-xs w-36">
                             <SelectValue placeholder="Change status" />
