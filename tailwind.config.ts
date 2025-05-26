@@ -63,42 +63,17 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-        wedrose: {
-          50: '#fff5f7',
-          100: '#ffeaef',
-          200: '#ffcbd6',
-          300: '#ffa2b6',
-          400: '#ff6d8e',
-          500: '#ff4572',
-          600: '#e71c50',
-          700: '#c20e42',
-          800: '#a00e3a',
-          900: '#841234',
-        },
-        wedgold: {
-          50: '#fdf9e8',
-          100: '#fbf4d1',
-          200: '#f7e8a3',
-          300: '#f3d76b',
-          400: '#efc53f',
-          500: '#e9b11a',
-          600: '#cc9014',
-          700: '#a96e12',
-          800: '#8a5714',
-          900: '#734816',
-        },
-        wedneutral: {
-          50: '#f9f9f8',
-          100: '#f1f0ee',
-          200: '#e2e0dc',
-          300: '#ccc8c0',
-          400: '#b2aca1',
-          500: '#9b9385',
-          600: '#867d6f',
-          700: '#6e665b',
-          800: '#5c554c',
-          900: '#4d4841',
-        }
+				sanskara: {
+					red: "#C41E3A",
+					gold: "#D4AF37",
+					magenta: "#CB2C90",
+					orange: "#FF7722",
+					maroon: "#800000",
+					purple: "#9B30FF",
+					green: "#006400",
+					cream: "#FFF8DC",
+					amber: "#FFBF00"
+				}
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -122,35 +97,39 @@ export default {
 						height: '0'
 					}
 				},
-        'fade-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' }
-        },
-        'slide-up': {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' }
-        },
-        'slide-down': {
-          '0%': { transform: 'translateY(-20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' }
-        },
-        'slide-in-right': {
-          '0%': { transform: 'translateX(20px)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' }
-        }
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'shimmer': {
+					'0%': { backgroundPosition: '-200% 0' },
+					'100%': { backgroundPosition: '200% 0' },
+				},
+				'spin-slow': {
+					'0%': { transform: 'rotate(0deg)' },
+					'100%': { transform: 'rotate(360deg)' },
+				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-        'fade-in': 'fade-in 0.6s ease-out',
-        'slide-up': 'slide-up 0.6s ease-out',
-        'slide-down': 'slide-down 0.6s ease-out',
-        'slide-in-right': 'slide-in-right 0.6s ease-out'
+				'fade-in': 'fade-in 0.5s ease-out',
+				'shimmer': 'shimmer 2s linear infinite',
+				'spin-slow': 'spin-slow 3s linear infinite',
 			},
-      fontFamily: {
-        serif: ['Playfair Display', 'serif'],
-        sans: ['Inter', 'sans-serif']
-      }
+			fontFamily: {
+				sanskrit: ['Poppins', 'sans-serif'],
+			},
+			backgroundImage: {
+				'mandala-pattern': "url('/mandala-pattern.svg')",
+				'paisley-pattern': "url('/paisley-pattern.svg')",
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
