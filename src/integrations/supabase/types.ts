@@ -532,57 +532,59 @@ export type Database = {
       }
       staff_portfolios: {
         Row: {
-          portfolio_id: string
-          staff_id: string
-          vendor_id: string
-          portfolio_type: string
-          title: string | null
-          description: string | null
-          image_urls: string[] | null
-          video_urls: string[] | null
-          generic_attributes: Record<string, any> | null
           created_at: string | null
+          description: string | null
+          generic_attributes: Json | null
+          image_urls: string[] | null
+          portfolio_id: string
+          portfolio_type: string
+          staff_id: string
+          title: string | null
           updated_at: string | null
+          vendor_id: string
+          video_urls: string[] | null
         }
         Insert: {
-          portfolio_id?: string
-          staff_id: string
-          vendor_id: string
-          portfolio_type: string
-          title?: string | null
-          description?: string | null
-          image_urls?: string[] | null
-          video_urls?: string[] | null
-          generic_attributes?: Record<string, any> | null
           created_at?: string | null
+          description?: string | null
+          generic_attributes?: Json | null
+          image_urls?: string[] | null
+          portfolio_id?: string
+          portfolio_type: string
+          staff_id: string
+          title?: string | null
           updated_at?: string | null
+          vendor_id: string
+          video_urls?: string[] | null
         }
         Update: {
-          portfolio_id?: string
-          staff_id?: string
-          vendor_id?: string
-          portfolio_type?: string
-          title?: string | null
-          description?: string | null
-          image_urls?: string[] | null
-          video_urls?: string[] | null
-          generic_attributes?: Record<string, any> | null
           created_at?: string | null
+          description?: string | null
+          generic_attributes?: Json | null
+          image_urls?: string[] | null
+          portfolio_id?: string
+          portfolio_type?: string
+          staff_id?: string
+          title?: string | null
           updated_at?: string | null
+          vendor_id?: string
+          video_urls?: string[] | null
         }
         Relationships: [
           {
             foreignKeyName: "staff_portfolios_staff_id_fkey"
             columns: ["staff_id"]
+            isOneToOne: false
             referencedRelation: "vendor_staff"
             referencedColumns: ["staff_id"]
           },
           {
             foreignKeyName: "staff_portfolios_vendor_id_fkey"
             columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["vendor_id"]
-          }
+          },
         ]
       }
       tasks: {
@@ -745,10 +747,10 @@ export type Database = {
           supabase_auth_uid: string
           updated_at: string | null
           user_id: string
+          user_type: string
           wedding_date: string | null
           wedding_location: string | null
           wedding_tradition: string | null
-          user_type: string // Add user_type column
         }
         Insert: {
           created_at?: string | null
@@ -758,10 +760,10 @@ export type Database = {
           supabase_auth_uid: string
           updated_at?: string | null
           user_id?: string
+          user_type?: string
           wedding_date?: string | null
           wedding_location?: string | null
           wedding_tradition?: string | null
-          user_type?: string // Add user_type column
         }
         Update: {
           created_at?: string | null
@@ -771,10 +773,10 @@ export type Database = {
           supabase_auth_uid?: string
           updated_at?: string | null
           user_id?: string
+          user_type?: string
           wedding_date?: string | null
           wedding_location?: string | null
           wedding_tradition?: string | null
-          user_type?: string // Add user_type column
         }
         Relationships: []
       }
@@ -1183,7 +1185,7 @@ export type Tables<
   }
     ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
