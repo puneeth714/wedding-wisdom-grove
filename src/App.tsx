@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from './hooks/useAuthContext';
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
@@ -38,44 +38,42 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/vendor-onboarding" element={<VendorOnboarding />} />
-            
-            {/* Staff routes */}
-            <Route path="/staff/login" element={<StaffLoginPage />} />
-            <Route path="/staff/onboarding" element={<StaffOnboarding />} />
-            <Route path="/staff/*" element={<StaffProtectedRoute />}>
-              <Route path="dashboard" element={<StaffDashboardPage />} />
-              <Route path="profile" element={<StaffProfile />} />
-              <Route path="bookings" element={<StaffBookings />} />
-              <Route path="tasks" element={<StaffTasks />} />
-              <Route path="availability" element={<StaffAvailability />} />
-              <Route path="services" element={<StaffServices />} />
-              <Route path="notifications" element={<StaffNotifications />} />
-            </Route>
-            
-            {/* Vendor routes with layout */}
-            <Route path="/" element={<VendorLayout><Dashboard /></VendorLayout>} />
-            <Route path="/profile" element={<VendorLayout><EditProfile /></VendorLayout>} />
-            <Route path="/calendar" element={<VendorLayout><Calendar /></VendorLayout>} />
-            <Route path="/bookings" element={<VendorLayout><Bookings /></VendorLayout>} />
-            <Route path="/services" element={<VendorLayout><Services /></VendorLayout>} />
-            <Route path="/tasks" element={<VendorLayout><Tasks /></VendorLayout>} />
-            <Route path="/staff" element={<VendorLayout><Staff /></VendorLayout>} />
-            <Route path="/notifications" element={<VendorLayout><Notifications /></VendorLayout>} />
-            <Route path="/reviews" element={<VendorLayout><Reviews /></VendorLayout>} />
-            <Route path="/payments" element={<VendorLayout><Payments /></VendorLayout>} />
-            <Route path="/settings" element={<VendorLayout><Settings /></VendorLayout>} />
-            
-            {/* Customer routes */}
-            <Route path="/customer/*" element={<Index />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/vendor-onboarding" element={<VendorOnboarding />} />
+          
+          {/* Staff routes */}
+          <Route path="/staff/login" element={<StaffLoginPage />} />
+          <Route path="/staff/onboarding" element={<StaffOnboarding />} />
+          <Route path="/staff/*" element={<StaffProtectedRoute />}>
+            <Route path="dashboard" element={<StaffDashboardPage />} />
+            <Route path="profile" element={<StaffProfile />} />
+            <Route path="bookings" element={<StaffBookings />} />
+            <Route path="tasks" element={<StaffTasks />} />
+            <Route path="availability" element={<StaffAvailability />} />
+            <Route path="services" element={<StaffServices />} />
+            <Route path="notifications" element={<StaffNotifications />} />
+          </Route>
+          
+          {/* Vendor routes with layout */}
+          <Route path="/" element={<VendorLayout><Dashboard /></VendorLayout>} />
+          <Route path="/profile" element={<VendorLayout><EditProfile /></VendorLayout>} />
+          <Route path="/calendar" element={<VendorLayout><Calendar /></VendorLayout>} />
+          <Route path="/bookings" element={<VendorLayout><Bookings /></VendorLayout>} />
+          <Route path="/services" element={<VendorLayout><Services /></VendorLayout>} />
+          <Route path="/tasks" element={<VendorLayout><Tasks /></VendorLayout>} />
+          <Route path="/staff" element={<VendorLayout><Staff /></VendorLayout>} />
+          <Route path="/notifications" element={<VendorLayout><Notifications /></VendorLayout>} />
+          <Route path="/reviews" element={<VendorLayout><Reviews /></VendorLayout>} />
+          <Route path="/payments" element={<VendorLayout><Payments /></VendorLayout>} />
+          <Route path="/settings" element={<VendorLayout><Settings /></VendorLayout>} />
+          
+          {/* Customer routes */}
+          <Route path="/customer/*" element={<Index />} />
+        </Routes>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
