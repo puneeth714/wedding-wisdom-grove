@@ -532,59 +532,57 @@ export type Database = {
       }
       staff_portfolios: {
         Row: {
-          created_at: string | null
-          description: string | null
-          generic_attributes: Json | null
-          image_urls: string[] | null
           portfolio_id: string
-          portfolio_type: string
           staff_id: string
-          title: string | null
-          updated_at: string | null
           vendor_id: string
+          portfolio_type: string
+          title: string | null
+          description: string | null
+          image_urls: string[] | null
           video_urls: string[] | null
+          generic_attributes: Record<string, any> | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          generic_attributes?: Json | null
-          image_urls?: string[] | null
           portfolio_id?: string
-          portfolio_type: string
           staff_id: string
-          title?: string | null
-          updated_at?: string | null
           vendor_id: string
+          portfolio_type: string
+          title?: string | null
+          description?: string | null
+          image_urls?: string[] | null
           video_urls?: string[] | null
+          generic_attributes?: Record<string, any> | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string | null
-          description?: string | null
-          generic_attributes?: Json | null
-          image_urls?: string[] | null
           portfolio_id?: string
-          portfolio_type?: string
           staff_id?: string
-          title?: string | null
-          updated_at?: string | null
           vendor_id?: string
+          portfolio_type?: string
+          title?: string | null
+          description?: string | null
+          image_urls?: string[] | null
           video_urls?: string[] | null
+          generic_attributes?: Record<string, any> | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "staff_portfolios_staff_id_fkey"
             columns: ["staff_id"]
-            isOneToOne: false
             referencedRelation: "vendor_staff"
             referencedColumns: ["staff_id"]
           },
           {
             foreignKeyName: "staff_portfolios_vendor_id_fkey"
             columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["vendor_id"]
-          },
+          }
         ]
       }
       tasks: {
@@ -747,10 +745,10 @@ export type Database = {
           supabase_auth_uid: string
           updated_at: string | null
           user_id: string
-          user_type: string
           wedding_date: string | null
           wedding_location: string | null
           wedding_tradition: string | null
+          user_type: string // Add user_type column
         }
         Insert: {
           created_at?: string | null
@@ -760,10 +758,10 @@ export type Database = {
           supabase_auth_uid: string
           updated_at?: string | null
           user_id?: string
-          user_type?: string
           wedding_date?: string | null
           wedding_location?: string | null
           wedding_tradition?: string | null
+          user_type?: string // Add user_type column
         }
         Update: {
           created_at?: string | null
@@ -773,10 +771,10 @@ export type Database = {
           supabase_auth_uid?: string
           updated_at?: string | null
           user_id?: string
-          user_type?: string
           wedding_date?: string | null
           wedding_location?: string | null
           wedding_tradition?: string | null
+          user_type?: string // Add user_type column
         }
         Relationships: []
       }
@@ -1127,6 +1125,109 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_service_staff: {
+        Row: {
+          id: string;
+          vendor_id: string;
+          service_id: string;
+          staff_id: string;
+          assigned_role: string | null;
+          is_active: boolean;
+          assigned_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          vendor_id: string;
+          service_id: string;
+          staff_id: string;
+          assigned_role?: string | null;
+          is_active?: boolean;
+          assigned_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          vendor_id?: string;
+          service_id?: string;
+          staff_id?: string;
+          assigned_role?: string | null;
+          is_active?: boolean;
+          assigned_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vendor_service_staff_vendor_id_fkey",
+            columns: ["vendor_id"],
+            isOneToOne: false,
+            referencedRelation: "vendors",
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_service_staff_service_id_fkey",
+            columns: ["service_id"],
+            isOneToOne: false,
+            referencedRelation: "vendor_services",
+            referencedColumns: ["service_id"]
+          },
+          {
+            foreignKeyName: "vendor_service_staff_staff_id_fkey",
+            columns: ["staff_id"],
+            isOneToOne: false,
+            referencedRelation: "vendor_staff",
+            referencedColumns: ["staff_id"]
+          }
+        ];
+      };
+      vendor_staff_availability: {
+        Row: {
+          staff_availability_id: string;
+          staff_id: string;
+          vendor_id: string;
+          available_date: string;
+          status: string;
+          notes: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          staff_availability_id?: string;
+          staff_id: string;
+          vendor_id: string;
+          available_date: string;
+          status?: string;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          staff_availability_id?: string;
+          staff_id?: string;
+          vendor_id?: string;
+          available_date?: string;
+          status?: string;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vendor_staff_availability_staff_id_fkey",
+            columns: ["staff_id"],
+            isOneToOne: false,
+            referencedRelation: "vendor_staff",
+            referencedColumns: ["staff_id"]
+          },
+          {
+            foreignKeyName: "vendor_staff_availability_vendor_id_fkey",
+            columns: ["vendor_id"],
+            isOneToOne: false,
+            referencedRelation: "vendors",
+            referencedColumns: ["vendor_id"]
+          }
+        ];
+      };
     }
     Views: {
       [_ in never]: never
@@ -1185,7 +1286,7 @@ export type Tables<
   }
     ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {

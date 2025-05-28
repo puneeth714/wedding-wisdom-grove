@@ -1,279 +1,389 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
-import { Textarea } from '../components/ui/textarea';
-import { Loader2, Calendar, MapPin, Clock, User, Phone, Mail, Edit3, Save, X } from 'lucide-react';
-import { useAuth } from '../hooks/useAuthContext';
-import { toast } from '../hooks/use-toast';
+import { Card, CardHeader, CardContent } from '../components/ui/card';
+import { Loader2, ExternalLink, Calendar, MapPin, Phone, Mail, User, FileText } from 'lucide-react';
 import StaffDashboardLayout from '../components/staff/StaffDashboardLayout';
+import { useAuth } from '@/hooks/useAuthContext';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+interface BookingUser {
+  display_name: string | null;
+  email: string | null;
+}
+
+interface BookingService {
+  service_name: string;
+  price: number;
+}
 
 interface Booking {
   booking_id: string;
-  user_id: string;
   event_date: string;
   booking_status: string;
-  notes_for_vendor: string | null;
   total_amount: number | null;
-  advance_amount_due: number | null;
-  paid_amount: number | null;
+  notes_for_vendor: string | null;
   created_at: string;
-  notes_for_user: string | null;
+  users: BookingUser | null;
+}
+
+interface TaskBooking extends Booking {
+  vendor_tasks: {
+    vendor_task_id: string;
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string | null;
+  }[];
 }
 
 const StaffBookings: React.FC = () => {
-  const { user, staffProfile } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const navigate = useNavigate();
+  const { user, staffProfile, isLoading: authLoading } = useAuth();
+  const [bookings, setBookings] = useState<TaskBooking[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<TaskBooking | null>(null);
+  const [bookingServices, setBookingServices] = useState<BookingService[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingBooking, setEditingBooking] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({
-    notes_for_user: '',
-    booking_status: ''
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   useEffect(() => {
-    if (user && staffProfile) {
-      fetchBookings();
+    if (authLoading) return;
+
+    if (!user) {
+      navigate('/staff/login', { replace: true });
+      return;
     }
-  }, [user, staffProfile]);
 
-  const fetchBookings = async () => {
-    if (!staffProfile?.vendor_id) return;
+    if (staffProfile?.staff_id) {
+      fetchStaffBookings();
+    }
+  }, [user, authLoading, navigate, staffProfile]);
 
+  const fetchStaffBookings = async () => {
+    if (!staffProfile?.staff_id) return;
+
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      // Fetch bookings that have tasks assigned to this staff member
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select('*')
-        .eq('vendor_id', staffProfile.vendor_id)
-        .order('event_date', { ascending: true });
+        .select(`
+          booking_id, 
+          event_date, 
+          booking_status, 
+          total_amount, 
+          notes_for_vendor,
+          created_at,
+          users ( display_name, email ),
+          vendor_tasks!inner (
+            vendor_task_id,
+            title,
+            description,
+            status,
+            priority
+          )
+        `)
+        .eq('vendor_tasks.assigned_staff_id', staffProfile.staff_id)
+        .order('event_date', { ascending: false });
 
-      if (error) throw error;
-      setBookings(data || []);
-    } catch (error: any) {
-      console.error('Error fetching bookings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load bookings',
-        variant: 'destructive'
-      });
+      if (bookingsError) throw bookingsError;
+      setBookings(bookingsData as TaskBooking[] || []);
+
+    } catch (fetchError: any) {
+      console.error('Error fetching staff bookings:', fetchError);
+      setError(fetchError.message || 'Failed to load bookings.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditBooking = (booking: Booking) => {
-    setEditingBooking(booking.booking_id);
-    setEditForm({
-      notes_for_user: booking.notes_for_user || '',
-      booking_status: booking.booking_status
-    });
-  };
-
-  const handleSaveBooking = async (bookingId: string) => {
+  const fetchBookingDetails = async (bookingId: string) => {
+    setDetailsLoading(true);
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          notes_for_user: editForm.notes_for_user,
-          booking_status: editForm.booking_status
-        })
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('booking_services')
+        .select(`
+          vendor_services (
+            service_name,
+            base_price
+          )
+        `)
         .eq('booking_id', bookingId);
 
-      if (error) throw error;
-
-      setBookings(prev => prev.map(booking => 
-        booking.booking_id === bookingId 
-          ? { ...booking, notes_for_user: editForm.notes_for_user, booking_status: editForm.booking_status }
-          : booking
-      ));
-
-      setEditingBooking(null);
-      toast({
-        title: 'Success',
-        description: 'Booking updated successfully'
-      });
-    } catch (error: any) {
-      console.error('Error updating booking:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update booking',
-        variant: 'destructive'
-      });
+      if (servicesError) throw servicesError;
+      
+      const services = servicesData?.map(item => ({
+        service_name: item.vendor_services?.service_name || 'Unknown Service',
+        price: item.vendor_services?.base_price || 0
+      })).filter(Boolean) as BookingService[] || [];
+      setBookingServices(services);
+    } catch (err: any) {
+      console.error('Error fetching booking services:', err);
+    } finally {
+      setDetailsLoading(false);
     }
+  };
+
+  const handleViewDetails = (booking: TaskBooking) => {
+    setSelectedBooking(booking);
+    fetchBookingDetails(booking.booking_id);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed': return 'bg-green-100 text-green-800';
-      case 'pending_confirmation': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'completed': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const getPriorityColor = (priority: string | null) => {
+    switch (priority) {
+      case 'High': return 'bg-red-100 text-red-800';
+      case 'Medium': return 'bg-yellow-100 text-yellow-800';
+      case 'Low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  if (loading) {
-    return (
-      <StaffDashboardLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading bookings...</span>
+  const renderContent = () => {
+    if (loading || authLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
+          <Loader2 className="h-12 w-12 animate-spin text-sanskara-red" />
+          <p className="ml-2 mt-4 text-lg text-muted-foreground">Loading bookings...</p>
         </div>
-      </StaffDashboardLayout>
-    );
-  }
+      );
+    }
 
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
+          <p className="text-red-600 mb-4 text-center">{error}</p>
+        </div>
+      );
+    }
+
+    return (
+      <Card className="w-full max-w-7xl mx-auto">
+        <CardHeader>
+          <h1 className="text-2xl font-semibold text-gray-700">My Assigned Bookings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Bookings where you have assigned tasks to complete.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {bookings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">My Tasks</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {bookings.map(booking => (
+                    <tr key={booking.booking_id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <User className="h-5 w-5 text-gray-400 mr-2" />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {booking.users?.display_name || 'Unknown Client'}
+                            </div>
+                            <div className="text-xs text-gray-500">{booking.users?.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center text-sm text-gray-700">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          {new Date(booking.event_date).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge className={`${getStatusColor(booking.booking_status)} text-xs`}>
+                          {booking.booking_status}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          {booking.vendor_tasks?.slice(0, 2).map(task => (
+                            <div key={task.vendor_task_id} className="flex items-center justify-between">
+                              <span className="text-xs text-gray-700 truncate max-w-32">{task.title}</span>
+                              <Badge className={`${getPriorityColor(task.priority)} text-[10px] ml-1`}>
+                                {task.priority || 'Normal'}
+                              </Badge>
+                            </div>
+                          ))}
+                          {booking.vendor_tasks && booking.vendor_tasks.length > 2 && (
+                            <div className="text-xs text-gray-500">
+                              +{booking.vendor_tasks.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {booking.total_amount !== null ? `₹${booking.total_amount.toFixed(2)}` : 'TBD'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="link" 
+                              size="sm" 
+                              onClick={() => handleViewDetails(booking)}
+                            >
+                              Details <ExternalLink className="ml-1 h-3 w-3" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Booking Details - #{booking.booking_id.substring(0, 8)}</DialogTitle>
+                            </DialogHeader>
+                            {selectedBooking && (
+                              <div className="space-y-6">
+                                {/* Client Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <Card>
+                                    <CardHeader className="pb-3">
+                                      <h3 className="font-medium">Client Information</h3>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                      <div className="flex items-center">
+                                        <User className="h-4 w-4 mr-2 text-gray-400" />
+                                        <span>{selectedBooking.users?.display_name || 'Unknown'}</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                                        <span>{selectedBooking.users?.email || 'No email'}</span>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                  <Card>
+                                    <CardHeader className="pb-3">
+                                      <h3 className="font-medium">Event Information</h3>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                      <div className="flex items-center">
+                                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                                        <span>{new Date(selectedBooking.event_date).toLocaleDateString()}</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <Badge className={`${getStatusColor(selectedBooking.booking_status)}`}>
+                                          {selectedBooking.booking_status}
+                                        </Badge>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+
+                                {/* Services */}
+                                {detailsLoading ? (
+                                  <div className="flex justify-center py-4">
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                  </div>
+                                ) : bookingServices.length > 0 && (
+                                  <Card>
+                                    <CardHeader className="pb-3">
+                                      <h3 className="font-medium">Booked Services</h3>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="space-y-2">
+                                        {bookingServices.map((service, index) => (
+                                          <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                                            <span>{service.service_name}</span>
+                                            <span className="font-medium">₹{service.price}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                )}
+
+                                {/* Tasks */}
+                                <Card>
+                                  <CardHeader className="pb-3">
+                                    <h3 className="font-medium">My Assigned Tasks</h3>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <div className="space-y-3">
+                                      {selectedBooking.vendor_tasks?.map(task => (
+                                        <div key={task.vendor_task_id} className="border rounded-lg p-3">
+                                          <div className="flex justify-between items-start mb-2">
+                                            <h4 className="font-medium">{task.title}</h4>
+                                            <div className="flex gap-2">
+                                              <Badge className={`${getPriorityColor(task.priority)} text-xs`}>
+                                                {task.priority || 'Normal'}
+                                              </Badge>
+                                              <Badge variant="outline" className="text-xs">
+                                                {task.status}
+                                              </Badge>
+                                            </div>
+                                          </div>
+                                          {task.description && (
+                                            <p className="text-sm text-gray-600">{task.description}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                {/* Notes */}
+                                {selectedBooking.notes_for_vendor && (
+                                  <Card>
+                                    <CardHeader className="pb-3">
+                                      <h3 className="font-medium flex items-center">
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Vendor Notes
+                                      </h3>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <p className="text-sm text-gray-600">{selectedBooking.notes_for_vendor}</p>
+                                    </CardContent>
+                                  </Card>
+                                )}
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-700 text-lg">No bookings found with assigned tasks.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Bookings will appear here when you have tasks assigned to you.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+  
   return (
     <StaffDashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Bookings Management</h1>
-          <p className="text-muted-foreground">Manage and track all vendor bookings</p>
-        </div>
-
-        <div className="grid gap-6">
-          {bookings.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Bookings Found</h3>
-                <p className="text-muted-foreground text-center">
-                  Your vendor doesn't have any bookings yet. They'll appear here when customers book your services.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            bookings.map((booking) => (
-              <Card key={booking.booking_id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Booking #{booking.booking_id.substring(0, 8)}
-                      </CardTitle>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {formatDate(booking.event_date)}
-                        </span>
-                        <Badge className={getStatusColor(booking.booking_status)}>
-                          {booking.booking_status.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    {editingBooking === booking.booking_id ? (
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleSaveBooking(booking.booking_id)}>
-                          <Save className="h-4 w-4 mr-1" />
-                          Save
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingBooking(null)}>
-                          <X className="h-4 w-4 mr-1" />
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking)}>
-                        <Edit3 className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Customer Information</h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Customer ID: {booking.user_id.substring(0, 8)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-medium mb-2">Financial Details</h4>
-                      <div className="space-y-1 text-sm">
-                        {booking.total_amount && (
-                          <div>Total Amount: ₹{booking.total_amount.toLocaleString()}</div>
-                        )}
-                        {booking.advance_amount_due && (
-                          <div>Advance Due: ₹{booking.advance_amount_due.toLocaleString()}</div>
-                        )}
-                        {booking.paid_amount && (
-                          <div>Paid Amount: ₹{booking.paid_amount.toLocaleString()}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {booking.notes_for_vendor && (
-                    <div>
-                      <h4 className="font-medium mb-2">Customer Notes</h4>
-                      <p className="text-sm bg-gray-50 p-3 rounded-md">{booking.notes_for_vendor}</p>
-                    </div>
-                  )}
-
-                  <div>
-                    <h4 className="font-medium mb-2">Status & Notes</h4>
-                    {editingBooking === booking.booking_id ? (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-sm font-medium">Status</label>
-                          <select
-                            value={editForm.booking_status}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, booking_status: e.target.value }))}
-                            className="w-full mt-1 border rounded-md px-3 py-2"
-                          >
-                            <option value="pending_confirmation">Pending Confirmation</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Notes for Customer</label>
-                          <Textarea
-                            value={editForm.notes_for_user}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, notes_for_user: e.target.value }))}
-                            placeholder="Add notes for the customer..."
-                            className="mt-1"
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        {booking.notes_for_user ? (
-                          <p className="text-sm bg-blue-50 p-3 rounded-md">{booking.notes_for_user}</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground italic">No notes for customer</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      </div>
+      {renderContent()}
     </StaffDashboardLayout>
   );
 };

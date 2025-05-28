@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,6 +53,94 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
     }));
   };
 
+  const createStaffFromExistingUser = async (existingUserId: string) => {
+    console.log('Creating staff from existing user:', existingUserId);
+    
+    // Insert directly into vendor_staff table
+    const { error: staffInsertError } = await supabase
+      .from('vendor_staff')
+      .insert({
+        vendor_id: vendorProfile?.vendor_id,
+        email: formData.email,
+        display_name: formData.display_name,
+        phone_number: formData.phone_number || null,
+        role: formData.role,
+        is_active: true,
+        invitation_status: 'accepted',
+        supabase_auth_uid: existingUserId,
+      });
+
+    if (staffInsertError) {
+      throw new Error('Failed to add existing user as staff: ' + staffInsertError.message);
+    }
+
+    toast({
+      title: 'Staff Added Successfully',
+      description: 'The existing user has been added as staff member.',
+    });
+  };
+
+  const inviteNewUser = async () => {
+    console.log('Inviting new user');
+    
+    // Try to invite the user via email
+    const { data: inviteResponse, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+      formData.email
+    );
+
+    let supabase_auth_uid = null;
+
+    if (inviteError) {
+      console.log('Invitation failed, but continuing with staff creation:', inviteError.message);
+    } else {
+      console.log('Invitation successful:', inviteResponse);
+      supabase_auth_uid = inviteResponse?.user?.id || null;
+      
+      toast({
+        title: 'Invitation Sent',
+        description: 'The user has been invited. They need to verify their email.',
+        variant: 'default'
+      });
+    }
+
+    // Insert invitation into vendor_staff_invite table
+    const { error: inviteInsertError } = await supabase
+      .from('vendor_staff_invite')
+      .insert({
+        vendor_id: vendorProfile?.vendor_id,
+        email: formData.email,
+        role: formData.role,
+        invitation_status: 'pending',
+      });
+
+    if (inviteInsertError) {
+      console.error('Failed to create invitation record:', inviteInsertError.message);
+    }
+
+    // Insert into vendor_staff table
+    const { error: staffInsertError } = await supabase
+      .from('vendor_staff')
+      .insert({
+        vendor_id: vendorProfile?.vendor_id,
+        email: formData.email,
+        display_name: formData.display_name,
+        phone_number: formData.phone_number || null,
+        role: formData.role,
+        is_active: true,
+        invitation_status: 'pending',
+        supabase_auth_uid,
+      });
+
+    if (staffInsertError) {
+      throw new Error('Failed to add staff member: ' + staffInsertError.message);
+    }
+
+    toast({
+      title: 'Staff Invited',
+      description: 'The staff member has been invited successfully.',
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -76,73 +165,37 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
     setIsSubmitting(true);
 
     try {
-      // Invite the user via email
-      const { data: inviteResponse, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-        formData.email
-      );
-
-      if (inviteError) {
-        throw new Error('Failed to invite user: ' + inviteError.message);
-      }
-
-      // Debug log for invitation response
-      console.log('Invitation response:', inviteResponse);
-
-      // Correct the variant type for the toast
-      toast({
-        title: 'Invitation Sent',
-        description: 'The user has been invited. They need to verify their email before being added as active staff.',
-        variant: 'default' // Changed from 'info' to 'default' to match the allowed types
-      });
-
-      // Insert invitation into vendor_staff_invite table
-      const { error: inviteInsertError } = await supabase
-        .from('vendor_staff_invite')
-        .insert({
-          vendor_id: vendorProfile.vendor_id,
-          email: formData.email,
-          role: formData.role,
-          invitation_status: 'pending',
-        });
-
-      if (inviteInsertError) {
-        throw new Error('Failed to create invitation: ' + inviteInsertError.message);
-      }
-
-      // Debug log for vendor_staff_invite insertion
-      console.log('Inserting into vendor_staff_invite:', {
-        vendor_id: vendorProfile.vendor_id,
-        email: formData.email,
-        role: formData.role,
-        invitation_status: 'pending'
-      });
-      
-      // Insert directly into vendor_staff table with invited state
-      // Try to get the invited user's auth UID from the invite response
-      const supabase_auth_uid =
-        inviteResponse?.user?.id || null;
-
-      const { error: staffInsertError } = await supabase
+      // First check if this email already exists as staff for this vendor
+      const { data: existingStaff, error: existingStaffError } = await supabase
         .from('vendor_staff')
-        .insert({
-          vendor_id: vendorProfile.vendor_id,
-          email: formData.email,
-          display_name: formData.display_name,
-          phone_number: formData.phone_number || null,
-          role: formData.role,
-          is_active: true,
-          invitation_status: 'pending',
-          supabase_auth_uid, // Insert the auth UID if available
-        });
+        .select('staff_id')
+        .eq('vendor_id', vendorProfile.vendor_id)
+        .eq('email', formData.email)
+        .single();
 
-      if (staffInsertError) {
-        throw new Error('Failed to add staff member: ' + staffInsertError.message);
+      if (!existingStaffError && existingStaff) {
+        toast({
+          title: 'Staff Already Exists',
+          description: 'This email is already registered as staff for your vendor.',
+          variant: 'destructive',
+        });
+        return;
       }
 
-      toast({
-        title: 'Staff Invited',
-        description: 'The staff member has been invited successfully.',
-      });
+      // Check if user already exists in Supabase auth
+      const { data: existingUsers, error: userSearchError } = await supabase
+        .from('users')
+        .select('supabase_auth_uid')
+        .eq('email', formData.email)
+        .single();
+
+      if (!userSearchError && existingUsers?.supabase_auth_uid) {
+        // User exists, add them directly as staff
+        await createStaffFromExistingUser(existingUsers.supabase_auth_uid);
+      } else {
+        // User doesn't exist, invite them
+        await inviteNewUser();
+      }
 
       // Reset form
       setFormData({
@@ -180,7 +233,6 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
         table: 'vendor_staff',
         filter: `vendor_id=eq.${vendorProfile.vendor_id}`
       }, () => {
-        // Refresh the staff list dynamically
         if (onSuccess) {
           onSuccess();
         }
@@ -259,10 +311,10 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Inviting...
+                Adding Staff...
               </>
             ) : (
-              'Invite Staff Member'
+              'Add Staff Member'
             )}
           </Button>
         </CardFooter>

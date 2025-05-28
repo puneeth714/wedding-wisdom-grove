@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/hooks/useAuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-// Corresponds to the new navItems in StaffDashboardLayout
 const pageTitles: { [key: string]: string } = {
   '/staff/dashboard': 'Dashboard',
   '/staff/bookings': 'Bookings',
@@ -37,7 +36,6 @@ const StaffHeader: React.FC = () => {
     return currentPath ? pageTitles[currentPath] : 'Staff Dashboard';
   };
   
-  // Get initials for avatar fallback
   const getInitials = () => {
     if (staffProfile?.display_name) {
       return staffProfile.display_name
@@ -59,7 +57,7 @@ const StaffHeader: React.FC = () => {
 
   const handleSettingsClick = () => {
     navigate('/staff/settings');
-  }
+  };
   
   return (
     <header className="h-16 border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
