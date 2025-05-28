@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
@@ -24,7 +25,7 @@ interface VendorService {
   is_negotiable: boolean;
   is_in_house: boolean;
   portfolio_image_urls: string[] | null;
-  customizability_details: string | null;
+  customizability_details: any | null; // Changed from string to any to handle JSONB
   created_at: string;
 }
 
@@ -66,7 +67,14 @@ const StaffServices: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setServices(data || []);
+      
+      // Transform the data to ensure proper typing
+      const transformedData: VendorService[] = (data || []).map(item => ({
+        ...item,
+        customizability_details: item.customizability_details
+      }));
+      
+      setServices(transformedData);
     } catch (error: any) {
       console.error('Error fetching services:', error);
       toast({
@@ -98,7 +106,7 @@ const StaffServices: React.FC = () => {
           is_active: editForm.is_active,
           is_negotiable: editForm.is_negotiable,
           is_in_house: editForm.is_in_house,
-          customizability_details: editForm.customizability_details || null
+          customizability_details: editForm.customizability_details ? { details: editForm.customizability_details } : null
         });
 
       if (error) throw error;
@@ -150,7 +158,9 @@ const StaffServices: React.FC = () => {
       is_active: service.is_active,
       is_negotiable: service.is_negotiable,
       is_in_house: service.is_in_house,
-      customizability_details: service.customizability_details || ''
+      customizability_details: typeof service.customizability_details === 'object' && service.customizability_details 
+        ? service.customizability_details.details || '' 
+        : service.customizability_details || ''
     });
   };
 
@@ -169,7 +179,7 @@ const StaffServices: React.FC = () => {
           is_active: editForm.is_active,
           is_negotiable: editForm.is_negotiable,
           is_in_house: editForm.is_in_house,
-          customizability_details: editForm.customizability_details || null
+          customizability_details: editForm.customizability_details ? { details: editForm.customizability_details } : null
         })
         .eq('service_id', serviceId);
 
@@ -220,6 +230,13 @@ const StaffServices: React.FC = () => {
   const serviceCategories = [
     'photography', 'catering', 'decoration', 'venue', 'music', 'makeup', 'flowers', 'transport', 'other'
   ];
+
+  const getCustomizabilityText = (details: any): string => {
+    if (!details) return '';
+    if (typeof details === 'string') return details;
+    if (typeof details === 'object' && details.details) return details.details;
+    return JSON.stringify(details);
+  };
 
   if (loading) {
     return (
@@ -442,7 +459,6 @@ const StaffServices: React.FC = () => {
 
                 <CardContent>
                   {editingService === service.service_id ? (
-                    
                     <div className="space-y-4">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
@@ -472,6 +488,12 @@ const StaffServices: React.FC = () => {
                         onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                         placeholder="Service description..."
                         rows={3}
+                      />
+                      <Textarea
+                        value={editForm.customizability_details}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, customizability_details: e.target.value }))}
+                        placeholder="Customizability details..."
+                        rows={2}
                       />
                     </div>
                   ) : (
@@ -516,7 +538,7 @@ const StaffServices: React.FC = () => {
                       {service.customizability_details && (
                         <div>
                           <h4 className="font-medium mb-2">Customization Options</h4>
-                          <p className="text-sm text-muted-foreground">{service.customizability_details}</p>
+                          <p className="text-sm text-muted-foreground">{getCustomizabilityText(service.customizability_details)}</p>
                         </div>
                       )}
                     </div>
