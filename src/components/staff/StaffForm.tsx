@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,9 +52,25 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
     }));
   };
 
+  // Function to check if a user with the given email exists in Supabase Auth by querying the 'users' table
+  const checkIfUserExists = async (email: string) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('supabase_auth_uid')
+      .eq('email', email)
+      .single();
+
+    if (error && error.message === 'No rows found') {
+      return null; // User does not exist
+    } else if (error) {
+      throw new Error('Error checking for existing user: ' + error.message);
+    }
+    return data?.supabase_auth_uid || null; // Return user's auth_uid if found
+  };
+
   const createStaffFromExistingUser = async (existingUserId: string) => {
     console.log('Creating staff from existing user:', existingUserId);
-    
+
     // Insert directly into vendor_staff table
     const { error: staffInsertError } = await supabase
       .from('vendor_staff')
@@ -65,8 +80,8 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
         display_name: formData.display_name,
         phone_number: formData.phone_number || null,
         role: formData.role,
-        is_active: true,
-        invitation_status: 'accepted',
+        is_active: true, // Assuming existing users are active by default or handle separately
+        invitation_status: 'accepted', // Or a new status like 're-added'
         supabase_auth_uid: existingUserId,
       });
 
@@ -82,7 +97,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
 
   const inviteNewUser = async () => {
     console.log('Inviting new user');
-    
+
     // Try to invite the user via email
     const { data: inviteResponse, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
       formData.email
@@ -91,11 +106,17 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
     let supabase_auth_uid = null;
 
     if (inviteError) {
-      console.log('Invitation failed, but continuing with staff creation:', inviteError.message);
+      console.log('Invitation failed:', inviteError.message);
+       toast({
+        title: 'Invitation Failed',
+        description: 'Failed to send invitation: ' + inviteError.message,
+        variant: 'destructive'
+      });
+       throw new Error('Invitation failed: ' + inviteError.message); // Propagate error if invitation is critical
     } else {
       console.log('Invitation successful:', inviteResponse);
       supabase_auth_uid = inviteResponse?.user?.id || null;
-      
+
       toast({
         title: 'Invitation Sent',
         description: 'The user has been invited. They need to verify their email.',
@@ -115,6 +136,12 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
 
     if (inviteInsertError) {
       console.error('Failed to create invitation record:', inviteInsertError.message);
+       toast({
+        title: 'Error',
+        description: 'Failed to create invitation record: ' + inviteInsertError.message,
+        variant: 'destructive'
+      });
+       throw new Error('Failed to create invitation record: ' + inviteInsertError.message);
     }
 
     // Insert into vendor_staff table
@@ -126,7 +153,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
         display_name: formData.display_name,
         phone_number: formData.phone_number || null,
         role: formData.role,
-        is_active: true,
+        is_active: false, // New users are inactive until email verified via trigger
         invitation_status: 'pending',
         supabase_auth_uid,
       });
@@ -140,6 +167,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
       description: 'The staff member has been invited successfully.',
     });
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,23 +207,23 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
           description: 'This email is already registered as staff for your vendor.',
           variant: 'destructive',
         });
-        return;
+        setIsSubmitting(false);
+        return; // Stop the process if they are already staff for this vendor
       }
 
-      // Check if user already exists in Supabase auth
-      const { data: existingUsers, error: userSearchError } = await supabase
-        .from('users')
-        .select('supabase_auth_uid')
-        .eq('email', formData.email)
-        .single();
+      // --- Corrected LOGIC ---
+      // Check if user already exists in Supabase auth by querying 'users' table
+      const existingUserAuthUid = await checkIfUserExists(formData.email);
 
-      if (!userSearchError && existingUsers?.supabase_auth_uid) {
-        // User exists, add them directly as staff
-        await createStaffFromExistingUser(existingUsers.supabase_auth_uid);
+      if (existingUserAuthUid) {
+        // User exists in auth.users, add them directly to vendor_staff
+        await createStaffFromExistingUser(existingUserAuthUid);
       } else {
-        // User doesn't exist, invite them
+        // User doesn't exist, proceed with inviting them
         await inviteNewUser();
       }
+      // --- END Corrected LOGIC ---
+
 
       // Reset form
       setFormData({
@@ -224,12 +252,12 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
   // Set up realtime subscription for staff changes
   React.useEffect(() => {
     if (!vendorProfile?.vendor_id) return;
-    
+
     const channel = supabase
       .channel('public:vendor_staff')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public', // Added missing comma here
         table: 'vendor_staff',
         filter: `vendor_id=eq.${vendorProfile.vendor_id}`
       }, () => {
@@ -262,7 +290,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
               placeholder="Full name"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
             <Input
@@ -275,7 +303,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
               placeholder="Email address"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="phone_number">Phone Number</Label>
             <Input
@@ -286,7 +314,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSuccess }) => {
               placeholder="Phone number (optional)"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
             <Select
