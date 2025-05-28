@@ -14,6 +14,41 @@ import { toast } from '@/components/ui/use-toast';
 import { Loader2, Edit2, Save, X, Plus } from 'lucide-react';
 import ImageUploader from '@/components/ImageUploader';
 
+interface VendorDetails {
+  establishment_year?: string;
+  years_in_operation?: string;
+  alcoholPolicy?: {
+    allowed: boolean;
+    inHouseBar?: boolean;
+    permitRequired?: boolean;
+    corkageFee?: {
+      applicable: boolean;
+      amount?: number;
+    };
+  };
+  fireRitual?: string;
+  mandapSetup?: string;
+  venueRules?: string;
+  payment?: {
+    advanceBooking?: string;
+    terms?: string;
+    cancellationPolicy?: string;
+  };
+  [key: string]: any;
+}
+
+interface ExtendedVendorProfile {
+  vendor_id: string;
+  vendor_name: string;
+  contact_email: string;
+  phone_number: string;
+  website_url?: string;
+  description?: string;
+  address?: any;
+  portfolio_image_urls?: string[];
+  details?: VendorDetails;
+}
+
 const VendorProfile: React.FC = () => {
   const { user, vendorProfile, refreshVendorProfile } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +56,7 @@ const VendorProfile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [venueData, setVenueData] = useState<any>(null);
+  const [venueData, setVenueData] = useState<ExtendedVendorProfile | null>(null);
   const [services, setServices] = useState<any[]>([]);
   const [editedData, setEditedData] = useState<any>({});
 
@@ -48,16 +83,19 @@ const VendorProfile: React.FC = () => {
 
       if (servicesError) throw servicesError;
 
-      setVenueData(vendorProfile);
+      // Cast vendorProfile to extended type
+      const extendedVendorProfile = vendorProfile as ExtendedVendorProfile;
+      
+      setVenueData(extendedVendorProfile);
       setServices(servicesData || []);
       setEditedData({
-        vendor_name: vendorProfile.vendor_name,
-        contact_email: vendorProfile.contact_email,
-        phone_number: vendorProfile.phone_number,
-        website_url: vendorProfile.website_url || '',
-        description: vendorProfile.description || '',
-        address: vendorProfile.address || {},
-        details: vendorProfile.details || {}
+        vendor_name: extendedVendorProfile.vendor_name,
+        contact_email: extendedVendorProfile.contact_email,
+        phone_number: extendedVendorProfile.phone_number,
+        website_url: extendedVendorProfile.website_url || '',
+        description: extendedVendorProfile.description || '',
+        address: extendedVendorProfile.address || {},
+        details: extendedVendorProfile.details || {}
       });
     } catch (error: any) {
       console.error('Error fetching vendor data:', error);
@@ -113,6 +151,8 @@ const VendorProfile: React.FC = () => {
   };
 
   const handleCancel = () => {
+    if (!venueData) return;
+    
     setEditedData({
       vendor_name: venueData.vendor_name,
       contact_email: venueData.contact_email,
@@ -320,7 +360,7 @@ const VendorProfile: React.FC = () => {
   );
 
   const renderPolicies = () => {
-    const details = venueData?.details || {};
+    const details = venueData?.details as VendorDetails || {};
     
     return (
       <Card>
