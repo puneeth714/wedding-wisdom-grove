@@ -21,7 +21,6 @@ import Reviews from './pages/Reviews';
 import Payments from './pages/Payments';
 import Notifications from './pages/Notifications';
 import VendorOnboarding from './pages/VendorOnboarding';
-import VendorProfile from './pages/VendorProfile';
 import StaffLoginPage from './pages/StaffLoginPage';
 import StaffDashboard from './pages/StaffDashboard';
 import StaffProtectedRoute from './components/StaffProtectedRoute';
@@ -105,7 +104,6 @@ function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/edit" element={<EditProfile />} />
-          <Route path="vendor-profile" element={<VendorProfile />} />
           <Route path="settings" element={<Settings />} />
           <Route path="reviews" element={<Reviews />} />
         </Route>
