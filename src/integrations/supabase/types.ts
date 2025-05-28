@@ -877,7 +877,7 @@ export type Database = {
         Row: {
           base_price: number | null
           created_at: string | null
-          customizability_details: string | null
+          customizability_details: Json | null
           description: string | null
           is_active: boolean | null
           is_in_house: boolean | null
@@ -896,7 +896,7 @@ export type Database = {
         Insert: {
           base_price?: number | null
           created_at?: string | null
-          customizability_details?: string | null
+          customizability_details?: Json | null
           description?: string | null
           is_active?: boolean | null
           is_in_house?: boolean | null
@@ -915,7 +915,7 @@ export type Database = {
         Update: {
           base_price?: number | null
           created_at?: string | null
-          customizability_details?: string | null
+          customizability_details?: Json | null
           description?: string | null
           is_active?: boolean | null
           is_in_house?: boolean | null
@@ -1177,6 +1177,7 @@ export type Database = {
           contact_email: string | null
           created_at: string | null
           description: string | null
+          details: Json | null
           is_active: boolean | null
           is_verified: boolean | null
           phone_number: string | null
@@ -1196,6 +1197,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string | null
           description?: string | null
+          details?: Json | null
           is_active?: boolean | null
           is_verified?: boolean | null
           phone_number?: string | null
@@ -1215,6 +1217,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string | null
           description?: string | null
+          details?: Json | null
           is_active?: boolean | null
           is_verified?: boolean | null
           phone_number?: string | null

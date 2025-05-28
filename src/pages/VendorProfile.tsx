@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -33,6 +35,53 @@ interface VendorDetails {
     advanceBooking?: string;
     terms?: string;
     cancellationPolicy?: string;
+  };
+  pricing?: {
+    rentalIncludedInCatering?: boolean;
+    weekdayRate?: number;
+    weekendRate?: number;
+    auspiciousRate?: number;
+    perHourRate?: number;
+    vegStandardMin?: number;
+    vegStandardMax?: number;
+    vegDeluxeMin?: number;
+    vegDeluxeMax?: number;
+    nonVegStandardMin?: number;
+    nonVegStandardMax?: number;
+    nonVegDeluxeMin?: number;
+    nonVegDeluxeMax?: number;
+  };
+  catering?: {
+    options?: string;
+    cuisineSpecialties?: string[];
+    menuCustomization?: boolean;
+  };
+  decoration?: {
+    options?: string;
+    basicIncluded?: boolean;
+    customization?: boolean;
+  };
+  amenities?: {
+    parkingCars?: number;
+    parkingTwoWheelers?: number;
+    valetParking?: boolean;
+    valetCost?: number;
+    totalRooms?: number;
+    acRooms?: number;
+    nonAcRooms?: number;
+    complimentaryRooms?: boolean;
+    extraRoomCharges?: number;
+    generatorCapacity?: string;
+    generatorDuration?: string;
+    soundSystem?: boolean;
+    projectorScreen?: boolean;
+    djServices?: string;
+    djCost?: number;
+    numberOfWashrooms?: string;
+    wheelchairAccess?: boolean;
+    elevator?: boolean;
+    numberOfStaff?: string;
+    wifiAvailability?: boolean;
   };
   [key: string]: any;
 }
@@ -75,7 +124,6 @@ const VendorProfile: React.FC = () => {
       
       if (!vendorProfile) return;
 
-      // Fetch vendor services
       const { data: servicesData, error: servicesError } = await supabase
         .from('vendor_services')
         .select('*')
@@ -83,7 +131,6 @@ const VendorProfile: React.FC = () => {
 
       if (servicesError) throw servicesError;
 
-      // Cast vendorProfile to extended type
       const extendedVendorProfile = vendorProfile as ExtendedVendorProfile;
       
       setVenueData(extendedVendorProfile);
@@ -165,6 +212,36 @@ const VendorProfile: React.FC = () => {
     setIsEditing(false);
   };
 
+  const updateDetailField = (path: string, value: any) => {
+    const pathArray = path.split('.');
+    const newDetails = { ...editedData.details };
+    
+    let current = newDetails;
+    for (let i = 0; i < pathArray.length - 1; i++) {
+      if (!current[pathArray[i]]) {
+        current[pathArray[i]] = {};
+      }
+      current = current[pathArray[i]];
+    }
+    current[pathArray[pathArray.length - 1]] = value;
+    
+    setEditedData(prev => ({ ...prev, details: newDetails }));
+  };
+
+  const getDetailValue = (path: string) => {
+    const pathArray = path.split('.');
+    let current = editedData.details || {};
+    
+    for (const key of pathArray) {
+      if (current && typeof current === 'object' && key in current) {
+        current = current[key];
+      } else {
+        return '';
+      }
+    }
+    return current || '';
+  };
+
   const renderBasicInfo = () => (
     <Card>
       <CardHeader>
@@ -212,6 +289,15 @@ const VendorProfile: React.FC = () => {
                 <Input
                   value={editedData.website_url || ''}
                   onChange={(e) => setEditedData(prev => ({ ...prev, website_url: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Establishment Year</Label>
+                <Input
+                  value={getDetailValue('establishment_year')}
+                  onChange={(e) => updateDetailField('establishment_year', e.target.value)}
+                  placeholder="e.g., 2010"
                 />
               </div>
             </div>
@@ -279,6 +365,11 @@ const VendorProfile: React.FC = () => {
                 <Label className="text-sm font-medium text-gray-500">Website</Label>
                 <p className="text-sm">{venueData?.website_url || 'Not provided'}</p>
               </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Establishment Year</Label>
+                <p className="text-sm">{venueData?.details?.establishment_year || 'Not provided'}</p>
+              </div>
             </div>
             
             <div>
@@ -295,6 +386,235 @@ const VendorProfile: React.FC = () => {
       </CardContent>
     </Card>
   );
+
+  const renderPricingAndCatering = () => {
+    const details = venueData?.details as VendorDetails || {};
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Pricing & Catering</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isEditing ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={getDetailValue('pricing.rentalIncludedInCatering')}
+                  onCheckedChange={(checked) => updateDetailField('pricing.rentalIncludedInCatering', checked)}
+                />
+                <Label>Rental included in catering charges</Label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Weekday Rate (₹)</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('pricing.weekdayRate')}
+                    onChange={(e) => updateDetailField('pricing.weekdayRate', parseInt(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Weekend Rate (₹)</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('pricing.weekendRate')}
+                    onChange={(e) => updateDetailField('pricing.weekendRate', parseInt(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Veg Standard (Min ₹)</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('pricing.vegStandardMin')}
+                    onChange={(e) => updateDetailField('pricing.vegStandardMin', parseInt(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Veg Standard (Max ₹)</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('pricing.vegStandardMax')}
+                    onChange={(e) => updateDetailField('pricing.vegStandardMax', parseInt(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Catering Options</Label>
+                <Select
+                  value={getDetailValue('catering.options')}
+                  onValueChange={(value) => updateDetailField('catering.options', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select catering option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in-house-only">In-house Catering Only</SelectItem>
+                    <SelectItem value="outside-allowed">Outside Caterers Allowed</SelectItem>
+                    <SelectItem value="both">Both Allowed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {details.pricing?.rentalIncludedInCatering && (
+                <div>
+                  <Badge variant="secondary">Rental included in catering</Badge>
+                </div>
+              )}
+
+              {(details.pricing?.weekdayRate || details.pricing?.weekendRate) && (
+                <div>
+                  <h4 className="font-medium mb-2">Rental Rates</h4>
+                  <div className="space-y-1 text-sm">
+                    {details.pricing?.weekdayRate && (
+                      <p><span className="font-medium">Weekday:</span> ₹{details.pricing.weekdayRate}</p>
+                    )}
+                    {details.pricing?.weekendRate && (
+                      <p><span className="font-medium">Weekend:</span> ₹{details.pricing.weekendRate}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(details.pricing?.vegStandardMin || details.pricing?.vegStandardMax) && (
+                <div>
+                  <h4 className="font-medium mb-2">Food Pricing (Per Plate)</h4>
+                  <div className="space-y-1 text-sm">
+                    {(details.pricing?.vegStandardMin || details.pricing?.vegStandardMax) && (
+                      <p>
+                        <span className="font-medium">Veg Standard:</span> 
+                        ₹{details.pricing?.vegStandardMin} - ₹{details.pricing?.vegStandardMax}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {details.catering?.options && (
+                <div>
+                  <h4 className="font-medium mb-2">Catering Options</h4>
+                  <p className="text-sm capitalize">{details.catering.options.replace('-', ' ')}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderAmenities = () => {
+    const details = venueData?.details as VendorDetails || {};
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Amenities & Facilities</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isEditing ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Parking (Cars)</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('amenities.parkingCars')}
+                    onChange={(e) => updateDetailField('amenities.parkingCars', parseInt(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Parking (2-Wheelers)</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('amenities.parkingTwoWheelers')}
+                    onChange={(e) => updateDetailField('amenities.parkingTwoWheelers', parseInt(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Total Rooms</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('amenities.totalRooms')}
+                    onChange={(e) => updateDetailField('amenities.totalRooms', parseInt(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>AC Rooms</Label>
+                  <Input
+                    type="number"
+                    value={getDetailValue('amenities.acRooms')}
+                    onChange={(e) => updateDetailField('amenities.acRooms', parseInt(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={getDetailValue('amenities.wifiAvailability')}
+                  onCheckedChange={(checked) => updateDetailField('amenities.wifiAvailability', checked)}
+                />
+                <Label>Wi-Fi Available</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={getDetailValue('amenities.wheelchairAccess')}
+                  onCheckedChange={(checked) => updateDetailField('amenities.wheelchairAccess', checked)}
+                />
+                <Label>Wheelchair Access</Label>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {(details.amenities?.parkingCars || details.amenities?.parkingTwoWheelers) && (
+                <div>
+                  <h4 className="font-medium mb-2">Parking</h4>
+                  <div className="space-y-1 text-sm">
+                    {details.amenities?.parkingCars && (
+                      <p><span className="font-medium">Cars:</span> {details.amenities.parkingCars} spaces</p>
+                    )}
+                    {details.amenities?.parkingTwoWheelers && (
+                      <p><span className="font-medium">2-Wheelers:</span> {details.amenities.parkingTwoWheelers} spaces</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(details.amenities?.totalRooms || details.amenities?.acRooms) && (
+                <div>
+                  <h4 className="font-medium mb-2">Accommodation</h4>
+                  <div className="space-y-1 text-sm">
+                    {details.amenities?.totalRooms && (
+                      <p><span className="font-medium">Total Rooms:</span> {details.amenities.totalRooms}</p>
+                    )}
+                    {details.amenities?.acRooms && (
+                      <p><span className="font-medium">AC Rooms:</span> {details.amenities.acRooms}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {details.amenities?.wifiAvailability && <Badge variant="secondary">Wi-Fi Available</Badge>}
+                {details.amenities?.wheelchairAccess && <Badge variant="secondary">Wheelchair Accessible</Badge>}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderServices = () => (
     <Card>
@@ -359,80 +679,6 @@ const VendorProfile: React.FC = () => {
     </Card>
   );
 
-  const renderPolicies = () => {
-    const details = venueData?.details as VendorDetails || {};
-    
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Policies & Preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Alcohol Policy */}
-          {details.alcoholPolicy && (
-            <div>
-              <h4 className="font-medium mb-2">Alcohol Policy</h4>
-              <div className="space-y-1 text-sm">
-                <p><span className="font-medium">Allowed:</span> {details.alcoholPolicy.allowed ? 'Yes' : 'No'}</p>
-                {details.alcoholPolicy.allowed && (
-                  <>
-                    <p><span className="font-medium">In-house Bar:</span> {details.alcoholPolicy.inHouseBar ? 'Yes' : 'No'}</p>
-                    <p><span className="font-medium">Permit Required:</span> {details.alcoholPolicy.permitRequired ? 'Yes' : 'No'}</p>
-                    {details.alcoholPolicy.corkageFee?.applicable && (
-                      <p><span className="font-medium">Corkage Fee:</span> ₹{details.alcoholPolicy.corkageFee.amount}</p>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Fire Ritual */}
-          {details.fireRitual && (
-            <div>
-              <h4 className="font-medium mb-2">Fire/Hawan Ritual</h4>
-              <p className="text-sm capitalize">{details.fireRitual}</p>
-            </div>
-          )}
-
-          {/* Mandap Setup */}
-          {details.mandapSetup && (
-            <div>
-              <h4 className="font-medium mb-2">Mandap Setup</h4>
-              <p className="text-sm">{details.mandapSetup}</p>
-            </div>
-          )}
-
-          {/* Venue Rules */}
-          {details.venueRules && (
-            <div>
-              <h4 className="font-medium mb-2">Venue Rules & Restrictions</h4>
-              <p className="text-sm">{details.venueRules}</p>
-            </div>
-          )}
-
-          {/* Payment Terms */}
-          {details.payment && (
-            <div>
-              <h4 className="font-medium mb-2">Payment Terms</h4>
-              <div className="space-y-1 text-sm">
-                {details.payment.advanceBooking && (
-                  <p><span className="font-medium">Advance Booking:</span> {details.payment.advanceBooking}</p>
-                )}
-                {details.payment.terms && (
-                  <p><span className="font-medium">Terms:</span> {details.payment.terms}</p>
-                )}
-                {details.payment.cancellationPolicy && (
-                  <p><span className="font-medium">Cancellation Policy:</span> {details.payment.cancellationPolicy}</p>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
   const renderPhotos = () => (
     <Card>
       <CardHeader>
@@ -495,10 +741,11 @@ const VendorProfile: React.FC = () => {
       </div>
 
       <Tabs defaultValue="basic" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
+          <TabsTrigger value="amenities">Amenities</TabsTrigger>
           <TabsTrigger value="services">Services</TabsTrigger>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
           <TabsTrigger value="photos">Photos</TabsTrigger>
         </TabsList>
 
@@ -506,12 +753,16 @@ const VendorProfile: React.FC = () => {
           {renderBasicInfo()}
         </TabsContent>
 
-        <TabsContent value="services">
-          {renderServices()}
+        <TabsContent value="pricing">
+          {renderPricingAndCatering()}
         </TabsContent>
 
-        <TabsContent value="policies">
-          {renderPolicies()}
+        <TabsContent value="amenities">
+          {renderAmenities()}
+        </TabsContent>
+
+        <TabsContent value="services">
+          {renderServices()}
         </TabsContent>
 
         <TabsContent value="photos">
