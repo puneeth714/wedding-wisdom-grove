@@ -56,15 +56,15 @@ function App() {
         {/* Protected Staff Routes */}
         <Route element={<StaffProtectedRoute />}>
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
-          <Route path="/staff/onboarding" element={<StaffOnboarding />} /> {/* Staff onboarding route */}
-          <Route path="/staff/reset-password" element={<StaffResetPassword />} /> {/* Staff reset password route */}
-          <Route path="/staff/tasks" element={<StaffTasks />} /> {/* Staff tasks route */}
-          <Route path="/staff/bookings" element={<StaffBookings />} /> {/* Staff bookings route */}
-          <Route path="/staff/availability" element={<StaffAvailabilityPage />} /> {/* Staff availability route */}
-          <Route path="/staff/services" element={<StaffVendorServicesPage />} /> {/* Staff services route */}
-          <Route path="/staff/notifications" element={<StaffNotifications />} /> {/* Staff notifications route */}
-          <Route path="/staff/profile" element={<StaffProfile />} /> {/* Staff profile route */}
-          <Route path="/staff/settings" element={<StaffSettings />} /> {/* Staff settings route */}
+          <Route path="/staff/onboarding" element={<StaffOnboarding />} />
+          <Route path="/staff/reset-password" element={<StaffResetPassword />} />
+          <Route path="/staff/tasks" element={<StaffTasks />} />
+          <Route path="/staff/bookings" element={<StaffBookings />} />
+          <Route path="/staff/availability" element={<StaffAvailabilityPage />} />
+          <Route path="/staff/services" element={<StaffVendorServicesPage />} />
+          <Route path="/staff/notifications" element={<StaffNotifications />} />
+          <Route path="/staff/profile" element={<StaffProfile />} />
+          <Route path="/staff/settings" element={<StaffSettings />} />
         </Route>
         
         {/* Vendor onboarding route */}
