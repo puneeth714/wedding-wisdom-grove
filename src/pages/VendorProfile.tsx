@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,19 +82,59 @@ interface VendorDetails {
     numberOfStaff?: string;
     wifiAvailability?: boolean;
   };
+  services?: {
+    photography?: boolean;
+    videography?: boolean;
+    decoration?: boolean;
+    catering?: boolean;
+    music?: boolean;
+    makeup?: boolean;
+    mehendi?: boolean;
+    transportation?: boolean;
+  };
   [key: string]: any;
+}
+
+interface AddressData {
+  full_address?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+  landmark?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+interface PricingRangeData {
+  currency?: string;
+  min?: number;
+  max?: number;
+  per_plate_veg_min?: number;
+  per_plate_veg_max?: number;
+  per_plate_non_veg_min?: number;
+  per_plate_non_veg_max?: number;
+  venue_rental_min?: number;
+  venue_rental_max?: number;
 }
 
 interface ExtendedVendorProfile {
   vendor_id: string;
   vendor_name: string;
+  vendor_category: string;
   contact_email: string;
   phone_number: string;
   website_url?: string;
   description?: string;
-  address?: any;
+  address?: AddressData;
   portfolio_image_urls?: string[];
   details?: VendorDetails;
+  pricing_range?: PricingRangeData;
+  rating?: number;
+  is_active?: boolean;
+  is_verified?: boolean;
+  commission_rate?: number;
 }
 
 const VendorProfile: React.FC = () => {
@@ -137,12 +176,14 @@ const VendorProfile: React.FC = () => {
       setServices(servicesData || []);
       setEditedData({
         vendor_name: extendedVendorProfile.vendor_name,
+        vendor_category: extendedVendorProfile.vendor_category,
         contact_email: extendedVendorProfile.contact_email,
         phone_number: extendedVendorProfile.phone_number,
         website_url: extendedVendorProfile.website_url || '',
         description: extendedVendorProfile.description || '',
         address: extendedVendorProfile.address || {},
-        details: extendedVendorProfile.details || {}
+        details: extendedVendorProfile.details || {},
+        pricing_range: extendedVendorProfile.pricing_range || {}
       });
     } catch (error: any) {
       console.error('Error fetching vendor data:', error);
@@ -166,12 +207,14 @@ const VendorProfile: React.FC = () => {
         .from('vendors')
         .update({
           vendor_name: editedData.vendor_name,
+          vendor_category: editedData.vendor_category,
           contact_email: editedData.contact_email,
           phone_number: editedData.phone_number,
           website_url: editedData.website_url,
           description: editedData.description,
           address: editedData.address,
           details: editedData.details,
+          pricing_range: editedData.pricing_range,
           updated_at: new Date().toISOString()
         })
         .eq('vendor_id', vendorProfile.vendor_id);
@@ -202,12 +245,14 @@ const VendorProfile: React.FC = () => {
     
     setEditedData({
       vendor_name: venueData.vendor_name,
+      vendor_category: venueData.vendor_category,
       contact_email: venueData.contact_email,
       phone_number: venueData.phone_number,
       website_url: venueData.website_url || '',
       description: venueData.description || '',
       address: venueData.address || {},
-      details: venueData.details || {}
+      details: venueData.details || {},
+      pricing_range: venueData.pricing_range || {}
     });
     setIsEditing(false);
   };
@@ -226,6 +271,20 @@ const VendorProfile: React.FC = () => {
     current[pathArray[pathArray.length - 1]] = value;
     
     setEditedData(prev => ({ ...prev, details: newDetails }));
+  };
+
+  const updateAddressField = (field: string, value: any) => {
+    setEditedData(prev => ({
+      ...prev,
+      address: { ...prev.address, [field]: value }
+    }));
+  };
+
+  const updatePricingField = (field: string, value: any) => {
+    setEditedData(prev => ({
+      ...prev,
+      pricing_range: { ...prev.pricing_range, [field]: value }
+    }));
   };
 
   const getDetailValue = (path: string) => {
@@ -260,11 +319,32 @@ const VendorProfile: React.FC = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Venue Name</Label>
+                <Label>Business Name</Label>
                 <Input
                   value={editedData.vendor_name || ''}
                   onChange={(e) => setEditedData(prev => ({ ...prev, vendor_name: e.target.value }))}
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={editedData.vendor_category || ''}
+                  onValueChange={(value) => setEditedData(prev => ({ ...prev, vendor_category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="venue">Venue</SelectItem>
+                    <SelectItem value="catering">Catering</SelectItem>
+                    <SelectItem value="photography">Photography</SelectItem>
+                    <SelectItem value="decoration">Decoration</SelectItem>
+                    <SelectItem value="music">Music</SelectItem>
+                    <SelectItem value="makeup">Makeup</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
@@ -311,18 +391,6 @@ const VendorProfile: React.FC = () => {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label>Address</Label>
-              <Textarea
-                value={editedData.address?.full_address || ''}
-                onChange={(e) => setEditedData(prev => ({
-                  ...prev,
-                  address: { ...prev.address, full_address: e.target.value }
-                }))}
-                rows={3}
-              />
-            </div>
-            
             <div className="flex space-x-2">
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
@@ -347,8 +415,13 @@ const VendorProfile: React.FC = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-500">Venue Name</Label>
+                <Label className="text-sm font-medium text-gray-500">Business Name</Label>
                 <p className="text-sm">{venueData?.vendor_name}</p>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Category</Label>
+                <p className="text-sm capitalize">{venueData?.vendor_category}</p>
               </div>
               
               <div>
@@ -376,139 +449,289 @@ const VendorProfile: React.FC = () => {
               <Label className="text-sm font-medium text-gray-500">Description</Label>
               <p className="text-sm mt-1">{venueData?.description || 'No description provided'}</p>
             </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-gray-500">Address</Label>
-              <p className="text-sm mt-1">{venueData?.address?.full_address || 'No address provided'}</p>
-            </div>
           </div>
         )}
       </CardContent>
     </Card>
   );
 
-  const renderPricingAndCatering = () => {
-    const details = venueData?.details as VendorDetails || {};
-    
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Pricing & Catering</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isEditing ? (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={getDetailValue('pricing.rentalIncludedInCatering')}
-                  onCheckedChange={(checked) => updateDetailField('pricing.rentalIncludedInCatering', checked)}
+  const renderAddressInfo = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Address Information</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isEditing ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Full Address</Label>
+              <Textarea
+                value={editedData.address?.full_address || ''}
+                onChange={(e) => updateAddressField('full_address', e.target.value)}
+                rows={3}
+                placeholder="Enter complete address"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>City</Label>
+                <Input
+                  value={editedData.address?.city || ''}
+                  onChange={(e) => updateAddressField('city', e.target.value)}
+                  placeholder="City"
                 />
-                <Label>Rental included in catering charges</Label>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Weekday Rate (₹)</Label>
-                  <Input
-                    type="number"
-                    value={getDetailValue('pricing.weekdayRate')}
-                    onChange={(e) => updateDetailField('pricing.weekdayRate', parseInt(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <Label>Weekend Rate (₹)</Label>
-                  <Input
-                    type="number"
-                    value={getDetailValue('pricing.weekendRate')}
-                    onChange={(e) => updateDetailField('pricing.weekendRate', parseInt(e.target.value))}
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                <Label>State</Label>
+                <Input
+                  value={editedData.address?.state || ''}
+                  onChange={(e) => updateAddressField('state', e.target.value)}
+                  placeholder="State"
+                />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Veg Standard (Min ₹)</Label>
-                  <Input
-                    type="number"
-                    value={getDetailValue('pricing.vegStandardMin')}
-                    onChange={(e) => updateDetailField('pricing.vegStandardMin', parseInt(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <Label>Veg Standard (Max ₹)</Label>
-                  <Input
-                    type="number"
-                    value={getDetailValue('pricing.vegStandardMax')}
-                    onChange={(e) => updateDetailField('pricing.vegStandardMax', parseInt(e.target.value))}
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                <Label>Country</Label>
+                <Input
+                  value={editedData.address?.country || ''}
+                  onChange={(e) => updateAddressField('country', e.target.value)}
+                  placeholder="Country"
+                />
               </div>
-
+              
+              <div className="space-y-2">
+                <Label>Pincode</Label>
+                <Input
+                  value={editedData.address?.pincode || ''}
+                  onChange={(e) => updateAddressField('pincode', e.target.value)}
+                  placeholder="Pincode"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Landmark</Label>
+              <Input
+                value={editedData.address?.landmark || ''}
+                onChange={(e) => updateAddressField('landmark', e.target.value)}
+                placeholder="Nearby landmark"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {venueData?.address?.full_address && (
               <div>
-                <Label>Catering Options</Label>
+                <Label className="text-sm font-medium text-gray-500">Full Address</Label>
+                <p className="text-sm mt-1">{venueData.address.full_address}</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              {venueData?.address?.city && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">City</Label>
+                  <p className="text-sm">{venueData.address.city}</p>
+                </div>
+              )}
+              
+              {venueData?.address?.state && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">State</Label>
+                  <p className="text-sm">{venueData.address.state}</p>
+                </div>
+              )}
+              
+              {venueData?.address?.country && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Country</Label>
+                  <p className="text-sm">{venueData.address.country}</p>
+                </div>
+              )}
+              
+              {venueData?.address?.pincode && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Pincode</Label>
+                  <p className="text-sm">{venueData.address.pincode}</p>
+                </div>
+              )}
+            </div>
+            
+            {venueData?.address?.landmark && (
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Landmark</Label>
+                <p className="text-sm">{venueData.address.landmark}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderPricingInfo = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Pricing Information</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isEditing ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Currency</Label>
                 <Select
-                  value={getDetailValue('catering.options')}
-                  onValueChange={(value) => updateDetailField('catering.options', value)}
+                  value={editedData.pricing_range?.currency || 'INR'}
+                  onValueChange={(value) => updatePricingField('currency', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select catering option" />
+                    <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="in-house-only">In-house Catering Only</SelectItem>
-                    <SelectItem value="outside-allowed">Outside Caterers Allowed</SelectItem>
-                    <SelectItem value="both">Both Allowed</SelectItem>
+                    <SelectItem value="INR">INR</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="space-y-2">
+                <Label>Base Price Range (Min)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.min || ''}
+                  onChange={(e) => updatePricingField('min', parseInt(e.target.value))}
+                  placeholder="Minimum price"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Base Price Range (Max)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.max || ''}
+                  onChange={(e) => updatePricingField('max', parseInt(e.target.value))}
+                  placeholder="Maximum price"
+                />
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {details.pricing?.rentalIncludedInCatering && (
-                <div>
-                  <Badge variant="secondary">Rental included in catering</Badge>
-                </div>
-              )}
-
-              {(details.pricing?.weekdayRate || details.pricing?.weekendRate) && (
-                <div>
-                  <h4 className="font-medium mb-2">Rental Rates</h4>
-                  <div className="space-y-1 text-sm">
-                    {details.pricing?.weekdayRate && (
-                      <p><span className="font-medium">Weekday:</span> ₹{details.pricing.weekdayRate}</p>
-                    )}
-                    {details.pricing?.weekendRate && (
-                      <p><span className="font-medium">Weekend:</span> ₹{details.pricing.weekendRate}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {(details.pricing?.vegStandardMin || details.pricing?.vegStandardMax) && (
-                <div>
-                  <h4 className="font-medium mb-2">Food Pricing (Per Plate)</h4>
-                  <div className="space-y-1 text-sm">
-                    {(details.pricing?.vegStandardMin || details.pricing?.vegStandardMax) && (
-                      <p>
-                        <span className="font-medium">Veg Standard:</span> 
-                        ₹{details.pricing?.vegStandardMin} - ₹{details.pricing?.vegStandardMax}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {details.catering?.options && (
-                <div>
-                  <h4 className="font-medium mb-2">Catering Options</h4>
-                  <p className="text-sm capitalize">{details.catering.options.replace('-', ' ')}</p>
-                </div>
-              )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Per Plate Veg (Min)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.per_plate_veg_min || ''}
+                  onChange={(e) => updatePricingField('per_plate_veg_min', parseInt(e.target.value))}
+                  placeholder="Min veg price per plate"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Per Plate Veg (Max)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.per_plate_veg_max || ''}
+                  onChange={(e) => updatePricingField('per_plate_veg_max', parseInt(e.target.value))}
+                  placeholder="Max veg price per plate"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Per Plate Non-Veg (Min)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.per_plate_non_veg_min || ''}
+                  onChange={(e) => updatePricingField('per_plate_non_veg_min', parseInt(e.target.value))}
+                  placeholder="Min non-veg price per plate"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Per Plate Non-Veg (Max)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.per_plate_non_veg_max || ''}
+                  onChange={(e) => updatePricingField('per_plate_non_veg_max', parseInt(e.target.value))}
+                  placeholder="Max non-veg price per plate"
+                />
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Venue Rental (Min)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.venue_rental_min || ''}
+                  onChange={(e) => updatePricingField('venue_rental_min', parseInt(e.target.value))}
+                  placeholder="Min venue rental"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Venue Rental (Max)</Label>
+                <Input
+                  type="number"
+                  value={editedData.pricing_range?.venue_rental_max || ''}
+                  onChange={(e) => updatePricingField('venue_rental_max', parseInt(e.target.value))}
+                  placeholder="Max venue rental"
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {venueData?.pricing_range && (
+              <>
+                {(venueData.pricing_range.min || venueData.pricing_range.max) && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Base Price Range</Label>
+                    <p className="text-sm">
+                      {venueData.pricing_range.currency || 'INR'} {venueData.pricing_range.min || 0} - {venueData.pricing_range.max || 0}
+                    </p>
+                  </div>
+                )}
+                
+                {(venueData.pricing_range.per_plate_veg_min || venueData.pricing_range.per_plate_veg_max) && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Per Plate Vegetarian</Label>
+                    <p className="text-sm">
+                      {venueData.pricing_range.currency || 'INR'} {venueData.pricing_range.per_plate_veg_min || 0} - {venueData.pricing_range.per_plate_veg_max || 0}
+                    </p>
+                  </div>
+                )}
+                
+                {(venueData.pricing_range.per_plate_non_veg_min || venueData.pricing_range.per_plate_non_veg_max) && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Per Plate Non-Vegetarian</Label>
+                    <p className="text-sm">
+                      {venueData.pricing_range.currency || 'INR'} {venueData.pricing_range.per_plate_non_veg_min || 0} - {venueData.pricing_range.per_plate_non_veg_max || 0}
+                    </p>
+                  </div>
+                )}
+                
+                {(venueData.pricing_range.venue_rental_min || venueData.pricing_range.venue_rental_max) && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Venue Rental</Label>
+                    <p className="text-sm">
+                      {venueData.pricing_range.currency || 'INR'} {venueData.pricing_range.venue_rental_min || 0} - {venueData.pricing_range.venue_rental_max || 0}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {(!venueData?.pricing_range || Object.keys(venueData.pricing_range).length === 0) && (
+              <p className="text-sm text-muted-foreground">No pricing information available</p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   const renderAmenities = () => {
     const details = venueData?.details as VendorDetails || {};
@@ -574,6 +797,14 @@ const VendorProfile: React.FC = () => {
                 />
                 <Label>Wheelchair Access</Label>
               </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={getDetailValue('amenities.soundSystem')}
+                  onCheckedChange={(checked) => updateDetailField('amenities.soundSystem', checked)}
+                />
+                <Label>Sound System Available</Label>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -608,6 +839,7 @@ const VendorProfile: React.FC = () => {
               <div className="space-y-2">
                 {details.amenities?.wifiAvailability && <Badge variant="secondary">Wi-Fi Available</Badge>}
                 {details.amenities?.wheelchairAccess && <Badge variant="secondary">Wheelchair Accessible</Badge>}
+                {details.amenities?.soundSystem && <Badge variant="secondary">Sound System</Badge>}
               </div>
             </div>
           )}
@@ -621,7 +853,7 @@ const VendorProfile: React.FC = () => {
       <CardHeader>
         <CardTitle>Services & Spaces</CardTitle>
         <CardDescription>
-          Manage your venue spaces and services
+          Manage your business services
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -724,7 +956,7 @@ const VendorProfile: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Complete Your Onboarding</h2>
-          <p className="text-gray-600 mb-4">You need to complete the venue onboarding process first.</p>
+          <p className="text-gray-600 mb-4">You need to complete the vendor onboarding process first.</p>
           <Button onClick={() => navigate('/onboarding')}>
             Complete Onboarding
           </Button>
@@ -736,25 +968,29 @@ const VendorProfile: React.FC = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Venue Profile</h1>
-        <p className="text-gray-600">Manage your venue information and settings</p>
+        <h1 className="text-3xl font-bold">Vendor Profile</h1>
+        <p className="text-gray-600">Manage your business information and settings</p>
       </div>
 
       <Tabs defaultValue="basic" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
+          <TabsTrigger value="address">Address</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
           <TabsTrigger value="amenities">Amenities</TabsTrigger>
           <TabsTrigger value="services">Services</TabsTrigger>
-          <TabsTrigger value="photos">Photos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic">
           {renderBasicInfo()}
         </TabsContent>
 
+        <TabsContent value="address">
+          {renderAddressInfo()}
+        </TabsContent>
+
         <TabsContent value="pricing">
-          {renderPricingAndCatering()}
+          {renderPricingInfo()}
         </TabsContent>
 
         <TabsContent value="amenities">
@@ -763,10 +999,6 @@ const VendorProfile: React.FC = () => {
 
         <TabsContent value="services">
           {renderServices()}
-        </TabsContent>
-
-        <TabsContent value="photos">
-          {renderPhotos()}
         </TabsContent>
       </Tabs>
     </div>
