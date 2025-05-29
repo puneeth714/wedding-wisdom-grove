@@ -7,296 +7,237 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 
 interface HallDetails {
-  hallName: string;
-  spaceType: string;
-  otherSpaceType: string;
-  theatreCapacity: string;
-  banquetCapacity: string;
-  floatingCapacity: string;
-  separateDining: boolean;
-  diningCapacity: string;
-  areaDimensions: string;
-  acType: string;
-  stageAvailable: boolean;
-  stageDimensions: string;
-  danceFloorAvailable: boolean;
-  danceFloorSize: string;
-  ambienceDescription: string;
+  name: string;
+  type: string;
+  custom_type?: string;
+  seating_capacity: {
+    theatre_style: number;
+    round_table: number;
+    floating_crowd: number;
+  };
+  dining: {
+    separate_dining_hall: boolean;
+    dining_capacity: number;
+  };
+  area_sqft: string;
+  air_conditioning: string;
+  stage: {
+    available: boolean;
+    dimensions?: string;
+  };
+  dance_floor: {
+    available: boolean;
+    size_sqft?: string;
+  };
+  ambience_description: string;
 }
 
-interface VenueFormData {
-  // Basic Information
-  venueName: string;
-  fullAddress: string;
-  contactPersonName: string;
-  phoneNumbers: string;
-  email: string;
-  websiteLinks: string;
-  yearsInOperation: string;
-  
-  // Hall Details
-  halls: HallDetails[];
-  
-  // Pricing & Catering
-  rentalIncludedInCatering: boolean;
-  weekdayRate: string;
-  weekendRate: string;
-  festivalRate: string;
-  durationOptions: string[];
-  hourlyRate: string;
-  basicRentalIncludes: string[];
-  cateringOptions: string;
-  outsideCaterersInfo: string;
-  royaltyFee: boolean;
-  kitchenAccess: boolean;
-  vegStandardRange: string;
-  vegDeluxeRange: string;
-  nonVegStandardRange: string;
-  nonVegDeluxeRange: string;
-  cuisineSpecialties: string[];
-  menuCustomization: string;
-  
-  // Alcohol Policy
-  alcoholAllowed: boolean;
-  inHouseBar: boolean;
-  permitRequired: boolean;
-  corkageFee: string;
-  
-  // Decoration
-  decorationOptions: string;
-  outsideDecoratorRestrictions: string;
-  basicDecorIncluded: boolean;
-  basicDecorDetails: string;
-  decorPackageRange: string;
-  decorThemes: string;
-  decorCustomization: boolean;
-  popularThemes: string;
-  
-  // Taxes & Payment
-  gstApplied: boolean;
-  gstPercentage: string;
-  otherCharges: string;
-  advanceAmount: string;
-  paymentTerms: string;
-  cancellationPolicy: string;
-  paymentModes: string[];
-  
-  // Amenities
-  carParkingCapacity: string;
-  bikesParkingCapacity: string;
-  valetParking: boolean;
-  valetCost: string;
-  totalRooms: string;
-  acRooms: string;
-  nonAcRooms: string;
-  complimentaryRooms: boolean;
-  extraRoomCharges: string;
-  roomAmenities: string[];
-  generatorCapacity: string;
-  backupDuration: string;
-  soundSystem: string;
-  projectorScreen: string;
-  djServices: string;
-  djCost: string;
-  washroomCount: string;
-  washroomDescription: string;
-  wheelchairAccess: boolean;
-  elevatorAccess: boolean;
-  staffCount: string;
-  staffServices: string;
-  wifiAvailable: boolean;
-  
-  // Ritual & Cultural
-  fireRitualAllowed: string;
-  mandapSetupInfo: string;
-  
-  // AI & Operational
-  bookingSystem: string;
-  aiIntegration: boolean;
-  uniqueFeatures: string;
-  idealClientProfile: string;
-  flexibilityLevel: string;
-  aiSuggestions: string;
-  preferredLeadMode: string;
-  venueRules: string;
+interface VenueOnboardingFormProps {
+  onComplete: () => void;
 }
 
-const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
-  const { user, refreshVendorProfile } = useAuth();
-  const [currentStep, setCurrentStep] = useState(1);
+const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete }) => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
 
-  const [formData, setFormData] = useState<VenueFormData>({
-    venueName: '',
-    fullAddress: '',
-    contactPersonName: '',
-    phoneNumbers: '',
-    email: '',
-    websiteLinks: '',
-    yearsInOperation: '',
-    halls: [{
-      hallName: '',
-      spaceType: '',
-      otherSpaceType: '',
-      theatreCapacity: '',
-      banquetCapacity: '',
-      floatingCapacity: '',
-      separateDining: false,
-      diningCapacity: '',
-      areaDimensions: '',
-      acType: '',
-      stageAvailable: false,
-      stageDimensions: '',
-      danceFloorAvailable: false,
-      danceFloorSize: '',
-      ambienceDescription: ''
-    }],
-    rentalIncludedInCatering: false,
-    weekdayRate: '',
-    weekendRate: '',
-    festivalRate: '',
-    durationOptions: [],
-    hourlyRate: '',
-    basicRentalIncludes: [],
-    cateringOptions: '',
-    outsideCaterersInfo: '',
-    royaltyFee: false,
-    kitchenAccess: false,
-    vegStandardRange: '',
-    vegDeluxeRange: '',
-    nonVegStandardRange: '',
-    nonVegDeluxeRange: '',
-    cuisineSpecialties: [],
-    menuCustomization: '',
-    alcoholAllowed: false,
-    inHouseBar: false,
-    permitRequired: false,
-    corkageFee: '',
-    decorationOptions: '',
-    outsideDecoratorRestrictions: '',
-    basicDecorIncluded: false,
-    basicDecorDetails: '',
-    decorPackageRange: '',
-    decorThemes: '',
-    decorCustomization: false,
-    popularThemes: '',
-    gstApplied: false,
-    gstPercentage: '',
-    otherCharges: '',
-    advanceAmount: '',
-    paymentTerms: '',
-    cancellationPolicy: '',
-    paymentModes: [],
-    carParkingCapacity: '',
-    bikesParkingCapacity: '',
-    valetParking: false,
-    valetCost: '',
-    totalRooms: '',
-    acRooms: '',
-    nonAcRooms: '',
-    complimentaryRooms: false,
-    extraRoomCharges: '',
-    roomAmenities: [],
-    generatorCapacity: '',
-    backupDuration: '',
-    soundSystem: '',
-    projectorScreen: '',
-    djServices: '',
-    djCost: '',
-    washroomCount: '',
-    washroomDescription: '',
-    wheelchairAccess: false,
-    elevatorAccess: false,
-    staffCount: '',
-    staffServices: '',
-    wifiAvailable: false,
-    fireRitualAllowed: '',
-    mandapSetupInfo: '',
-    bookingSystem: '',
-    aiIntegration: false,
-    uniqueFeatures: '',
-    idealClientProfile: '',
-    flexibilityLevel: '',
-    aiSuggestions: '',
-    preferredLeadMode: '',
-    venueRules: ''
-  });
+  // Basic Information
+  const [venueName, setVenueName] = useState('');
+  const [fullAddress, setFullAddress] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState('');
+  const [yearsInOperation, setYearsInOperation] = useState('');
 
-  const handleInputChange = (field: keyof VenueFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  // Hall Details
+  const [halls, setHalls] = useState<HallDetails[]>([{
+    name: '',
+    type: '',
+    custom_type: '',
+    seating_capacity: {
+      theatre_style: 0,
+      round_table: 0,
+      floating_crowd: 0
+    },
+    dining: {
+      separate_dining_hall: false,
+      dining_capacity: 0
+    },
+    area_sqft: '',
+    air_conditioning: '',
+    stage: {
+      available: false,
+      dimensions: ''
+    },
+    dance_floor: {
+      available: false,
+      size_sqft: ''
+    },
+    ambience_description: ''
+  }]);
 
-  const handleArrayToggle = (field: keyof VenueFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: (prev[field] as string[]).includes(value)
-        ? (prev[field] as string[]).filter(item => item !== value)
-        : [...(prev[field] as string[]), value]
-    }));
-  };
+  // Pricing & Packages
+  const [rentalIncludedInCatering, setRentalIncludedInCatering] = useState(false);
+  const [weekdayRate, setWeekdayRate] = useState('');
+  const [weekendRate, setWeekendRate] = useState('');
+  const [festivalRate, setFestivalRate] = useState('');
+  const [durationOptions, setDurationOptions] = useState<string[]>([]);
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [basicRentalIncludes, setBasicRentalIncludes] = useState<string[]>([]);
+
+  // Catering
+  const [cateringOptions, setCateringOptions] = useState('');
+  const [approvedVendors, setApprovedVendors] = useState('');
+  const [royaltyFee, setRoyaltyFee] = useState(false);
+  const [kitchenAccess, setKitchenAccess] = useState(false);
+  const [vegPriceMin, setVegPriceMin] = useState('');
+  const [vegPriceMax, setVegPriceMax] = useState('');
+  const [nonVegPriceMin, setNonVegPriceMin] = useState('');
+  const [nonVegPriceMax, setNonVegPriceMax] = useState('');
+  const [cuisineSpecialties, setCuisineSpecialties] = useState<string[]>([]);
+  const [menuCustomization, setMenuCustomization] = useState('');
+
+  // Alcohol Policy
+  const [alcoholAllowed, setAlcoholAllowed] = useState(false);
+  const [inHouseBar, setInHouseBar] = useState(false);
+  const [permitRequired, setPermitRequired] = useState(false);
+  const [corkageFee, setCorkageFee] = useState('');
+
+  // Decoration
+  const [decorationOptions, setDecorationOptions] = useState('');
+  const [decoratorRestrictions, setDecoratorRestrictions] = useState('');
+  const [basicDecorIncluded, setBasicDecorIncluded] = useState(false);
+  const [basicDecorDetails, setBasicDecorDetails] = useState('');
+  const [decorPriceMin, setDecorPriceMin] = useState('');
+  const [decorPriceMax, setDecorPriceMax] = useState('');
+  const [decorThemes, setDecorThemes] = useState('');
+  const [decorCustomization, setDecorCustomization] = useState(false);
+  const [popularThemes, setPopularThemes] = useState('');
+
+  // Taxes & Payment
+  const [gstApplied, setGstApplied] = useState(false);
+  const [gstPercentage, setGstPercentage] = useState('');
+  const [otherCharges, setOtherCharges] = useState('');
+  const [advanceAmount, setAdvanceAmount] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('');
+  const [cancellationPolicy, setCancellationPolicy] = useState('');
+  const [paymentModes, setPaymentModes] = useState<string[]>([]);
+
+  // Amenities
+  const [carCapacity, setCarCapacity] = useState('');
+  const [twoWheelerCapacity, setTwoWheelerCapacity] = useState('');
+  const [valetParking, setValetParking] = useState(false);
+  const [valetCost, setValetCost] = useState('');
+  const [totalRooms, setTotalRooms] = useState('');
+  const [acRooms, setAcRooms] = useState('');
+  const [nonAcRooms, setNonAcRooms] = useState('');
+  const [complimentaryRooms, setComplimentaryRooms] = useState(false);
+  const [extraRoomCharges, setExtraRoomCharges] = useState('');
+  const [roomAmenities, setRoomAmenities] = useState<string[]>([]);
+  const [generatorCapacity, setGeneratorCapacity] = useState('');
+  const [backupDuration, setBackupDuration] = useState('');
+  const [soundSystem, setSoundSystem] = useState('');
+  const [projectorScreen, setProjectorScreen] = useState('');
+  const [djServices, setDjServices] = useState('');
+  const [djCost, setDjCost] = useState('');
+  const [numberOfWashrooms, setNumberOfWashrooms] = useState('');
+  const [washroomDescription, setWashroomDescription] = useState('');
+  const [wheelchairAccess, setWheelchairAccess] = useState(false);
+  const [elevator, setElevator] = useState(false);
+  const [staffProvided, setStaffProvided] = useState('');
+  const [staffServices, setStaffServices] = useState('');
+  const [wifiAvailable, setWifiAvailable] = useState(false);
+
+  // Ritual & Cultural
+  const [fireRitualAllowed, setFireRitualAllowed] = useState('');
+  const [mandapSetup, setMandapSetup] = useState('');
+
+  // AI & Operational
+  const [currentBookingSystem, setCurrentBookingSystem] = useState('');
+  const [sanskaraIntegration, setSanskaraIntegration] = useState(false);
+  const [uniqueFeatures, setUniqueFeatures] = useState('');
+  const [idealClientProfile, setIdealClientProfile] = useState('');
+  const [flexibilityLevel, setFlexibilityLevel] = useState(3);
+  const [aiSuggestions, setAiSuggestions] = useState('');
+  const [preferredLeadMode, setPreferredLeadMode] = useState('');
+  const [venueRules, setVenueRules] = useState('');
 
   const addHall = () => {
-    setFormData(prev => ({
-      ...prev,
-      halls: [...prev.halls, {
-        hallName: '',
-        spaceType: '',
-        otherSpaceType: '',
-        theatreCapacity: '',
-        banquetCapacity: '',
-        floatingCapacity: '',
-        separateDining: false,
-        diningCapacity: '',
-        areaDimensions: '',
-        acType: '',
-        stageAvailable: false,
-        stageDimensions: '',
-        danceFloorAvailable: false,
-        danceFloorSize: '',
-        ambienceDescription: ''
-      }]
-    }));
-  };
-
-  const updateHall = (index: number, field: keyof HallDetails, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      halls: prev.halls.map((hall, i) => 
-        i === index ? { ...hall, [field]: value } : hall
-      )
-    }));
+    setHalls([...halls, {
+      name: '',
+      type: '',
+      custom_type: '',
+      seating_capacity: {
+        theatre_style: 0,
+        round_table: 0,
+        floating_crowd: 0
+      },
+      dining: {
+        separate_dining_hall: false,
+        dining_capacity: 0
+      },
+      area_sqft: '',
+      air_conditioning: '',
+      stage: {
+        available: false,
+        dimensions: ''
+      },
+      dance_floor: {
+        available: false,
+        size_sqft: ''
+      },
+      ambience_description: ''
+    }]);
   };
 
   const removeHall = (index: number) => {
-    if (formData.halls.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        halls: prev.halls.filter((_, i) => i !== index)
-      }));
+    if (halls.length > 1) {
+      setHalls(halls.filter((_, i) => i !== index));
     }
+  };
+
+  const updateHall = (index: number, field: string, value: any) => {
+    const updatedHalls = [...halls];
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      updatedHalls[index] = {
+        ...updatedHalls[index],
+        [parent]: {
+          ...updatedHalls[index][parent as keyof HallDetails],
+          [child]: value
+        }
+      };
+    } else {
+      updatedHalls[index] = {
+        ...updatedHalls[index],
+        [field]: value
+      };
+    }
+    setHalls(updatedHalls);
   };
 
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(formData.venueName && formData.fullAddress && formData.contactPersonName && formData.phoneNumbers && formData.email);
+        return !!(venueName && fullAddress && contactPerson && phoneNumber && email);
       case 2:
-        return formData.halls.every(hall => hall.hallName && hall.spaceType);
+        return halls.every(hall => hall.name && hall.type);
       case 3:
-        return !!(formData.cateringOptions);
+        return true; // Pricing is optional in many cases
       case 4:
-        return true; // Optional step
+        return true; // Amenities are optional
       case 5:
-        return true; // Optional step
+        return true; // Ritual support is optional
       case 6:
-        return true; // Optional step
+        return true; // AI section is optional
       default:
         return false;
     }
@@ -323,128 +264,164 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
 
     setIsLoading(true);
     try {
-      // Prepare vendor data
-      const vendorData = {
-        vendor_name: formData.venueName,
+      // Convert complex objects to JSON-compatible format
+      const venueData = {
+        vendor_name: venueName,
         vendor_category: 'Venue',
-        description: formData.uniqueFeatures,
-        contact_email: formData.email,
-        phone_number: formData.phoneNumbers,
-        website_url: formData.websiteLinks || null,
+        description: uniqueFeatures || `${venueName} - Complete venue facility`,
+        contact_email: email,
+        phone_number: phoneNumber,
+        website_url: website || null,
         supabase_auth_uid: user.id,
         address: {
-          full_address: formData.fullAddress,
+          full_address: fullAddress,
           city: '', // Extract from address if needed
-          state: '',
+          state: '', // Extract from address if needed
           country: 'India'
-        },
+        } as any,
         pricing_range: {
-          min: formData.weekdayRate || '0',
-          max: formData.festivalRate || '0',
+          min: vegPriceMin ? parseFloat(vegPriceMin) : 0,
+          max: vegPriceMax ? parseFloat(vegPriceMax) : 0,
           currency: 'INR'
-        },
+        } as any,
         details: {
-          contact_person: formData.contactPersonName,
-          years_in_operation: formData.yearsInOperation,
-          halls: formData.halls,
+          contact_person: contactPerson,
+          years_in_operation: yearsInOperation,
+          halls: halls.map(hall => ({
+            name: hall.name,
+            type: hall.type,
+            custom_type: hall.custom_type || null,
+            seating_capacity: {
+              theatre_style: hall.seating_capacity.theatre_style,
+              round_table: hall.seating_capacity.round_table,
+              floating_crowd: hall.seating_capacity.floating_crowd
+            },
+            dining: {
+              separate_dining_hall: hall.dining.separate_dining_hall,
+              dining_capacity: hall.dining.dining_capacity
+            },
+            area_sqft: hall.area_sqft,
+            air_conditioning: hall.air_conditioning,
+            stage: {
+              available: hall.stage.available,
+              dimensions: hall.stage.dimensions || null
+            },
+            dance_floor: {
+              available: hall.dance_floor.available,
+              size_sqft: hall.dance_floor.size_sqft || null
+            },
+            ambience_description: hall.ambience_description
+          })),
           rental_policy: {
-            rental_included_in_catering: formData.rentalIncludedInCatering,
-            weekday_rate: formData.weekdayRate,
-            weekend_rate: formData.weekendRate,
-            festival_rate: formData.festivalRate,
-            duration_options: formData.durationOptions,
-            hourly_rate: formData.hourlyRate,
-            basic_rental_includes: formData.basicRentalIncludes
+            rental_included_in_catering: rentalIncludedInCatering,
+            weekday_rate: weekdayRate,
+            weekend_rate: weekendRate,
+            festival_rate: festivalRate,
+            duration_options: durationOptions,
+            hourly_rate: hourlyRate,
+            basic_rental_includes: basicRentalIncludes
           },
           catering: {
-            options: formData.cateringOptions,
-            outside_caterers_info: formData.outsideCaterersInfo,
-            royalty_fee: formData.royaltyFee,
-            kitchen_access: formData.kitchenAccess,
-            veg_standard_range: formData.vegStandardRange,
-            veg_deluxe_range: formData.vegDeluxeRange,
-            nonveg_standard_range: formData.nonVegStandardRange,
-            nonveg_deluxe_range: formData.nonVegDeluxeRange,
-            cuisine_specialties: formData.cuisineSpecialties,
-            menu_customization: formData.menuCustomization
+            options: cateringOptions,
+            approved_vendors: approvedVendors,
+            royalty_fee: royaltyFee,
+            kitchen_access: kitchenAccess,
+            veg_price_range: {
+              min: vegPriceMin,
+              max: vegPriceMax
+            },
+            non_veg_price_range: {
+              min: nonVegPriceMin,
+              max: nonVegPriceMax
+            },
+            cuisine_specialties: cuisineSpecialties,
+            menu_customization: menuCustomization
           },
           alcohol_policy: {
-            allowed: formData.alcoholAllowed,
-            inhouse_bar: formData.inHouseBar,
-            permit_required: formData.permitRequired,
-            corkage_fee: formData.corkageFee
+            allowed: alcoholAllowed,
+            in_house_bar: inHouseBar,
+            permit_required: permitRequired,
+            corkage_fee: corkageFee
           },
           decoration: {
-            options: formData.decorationOptions,
-            restrictions: formData.outsideDecoratorRestrictions,
-            basic_included: formData.basicDecorIncluded,
-            basic_details: formData.basicDecorDetails,
-            package_range: formData.decorPackageRange,
-            themes: formData.decorThemes,
-            customization: formData.decorCustomization,
-            popular_themes: formData.popularThemes
+            options: decorationOptions,
+            restrictions: decoratorRestrictions,
+            basic_included: basicDecorIncluded,
+            basic_details: basicDecorDetails,
+            price_range: {
+              min: decorPriceMin,
+              max: decorPriceMax
+            },
+            themes: decorThemes,
+            customization: decorCustomization,
+            popular_themes: popularThemes
           },
-          payment: {
-            gst_applied: formData.gstApplied,
-            gst_percentage: formData.gstPercentage,
-            other_charges: formData.otherCharges,
-            advance_amount: formData.advanceAmount,
-            payment_terms: formData.paymentTerms,
-            cancellation_policy: formData.cancellationPolicy,
-            payment_modes: formData.paymentModes
+          taxes_payment: {
+            gst_applied: gstApplied,
+            gst_percentage: gstPercentage,
+            other_charges: otherCharges,
+            advance_amount: advanceAmount,
+            payment_terms: paymentTerms,
+            cancellation_policy: cancellationPolicy,
+            payment_modes: paymentModes
           },
           amenities: {
             parking: {
-              car_capacity: formData.carParkingCapacity,
-              bikes_capacity: formData.bikesParkingCapacity,
-              valet_available: formData.valetParking,
-              valet_cost: formData.valetCost
+              car_capacity: carCapacity,
+              two_wheeler_capacity: twoWheelerCapacity,
+              valet_available: valetParking,
+              valet_cost: valetCost
             },
             rooms: {
-              total: formData.totalRooms,
-              ac_rooms: formData.acRooms,
-              non_ac_rooms: formData.nonAcRooms,
-              complimentary: formData.complimentaryRooms,
-              extra_charges: formData.extraRoomCharges,
-              amenities: formData.roomAmenities
+              total_rooms: totalRooms,
+              ac_rooms: acRooms,
+              non_ac_rooms: nonAcRooms,
+              complimentary_rooms: complimentaryRooms,
+              extra_room_charges: extraRoomCharges,
+              amenities: roomAmenities
             },
-            infrastructure: {
-              generator_capacity: formData.generatorCapacity,
-              backup_duration: formData.backupDuration,
-              sound_system: formData.soundSystem,
-              projector_screen: formData.projectorScreen,
-              dj_services: formData.djServices,
-              dj_cost: formData.djCost,
-              washroom_count: formData.washroomCount,
-              washroom_description: formData.washroomDescription,
-              wheelchair_access: formData.wheelchairAccess,
-              elevator_access: formData.elevatorAccess,
-              staff_count: formData.staffCount,
-              staff_services: formData.staffServices,
-              wifi_available: formData.wifiAvailable
+            power_backup: {
+              generator_capacity: generatorCapacity,
+              duration: backupDuration
+            },
+            av_equipment: {
+              sound_system: soundSystem,
+              projector_screen: projectorScreen,
+              dj_services: djServices,
+              dj_cost: djCost
+            },
+            facilities: {
+              washrooms: numberOfWashrooms,
+              washroom_description: washroomDescription,
+              wheelchair_access: wheelchairAccess,
+              elevator: elevator,
+              staff_provided: staffProvided,
+              staff_services: staffServices,
+              wifi_available: wifiAvailable
             }
           },
-          cultural: {
-            fire_ritual_allowed: formData.fireRitualAllowed,
-            mandap_setup_info: formData.mandapSetupInfo
+          ritual_cultural: {
+            fire_ritual_allowed: fireRitualAllowed,
+            mandap_setup: mandapSetup
           },
           operational: {
-            booking_system: formData.bookingSystem,
-            ai_integration: formData.aiIntegration,
-            ideal_client_profile: formData.idealClientProfile,
-            flexibility_level: formData.flexibilityLevel,
-            ai_suggestions: formData.aiSuggestions,
-            preferred_lead_mode: formData.preferredLeadMode,
-            venue_rules: formData.venueRules
+            current_booking_system: currentBookingSystem,
+            sanskara_integration: sanskaraIntegration,
+            unique_features: uniqueFeatures,
+            ideal_client_profile: idealClientProfile,
+            flexibility_level: flexibilityLevel,
+            ai_suggestions: aiSuggestions,
+            preferred_lead_mode: preferredLeadMode,
+            venue_rules: venueRules
           }
-        }
+        } as any
       };
 
-      console.log("Submitting venue onboarding data:", vendorData);
+      console.log("Submitting venue data:", venueData);
 
       const { error } = await supabase
         .from('vendors')
-        .insert([vendorData]);
+        .insert([venueData]);
 
       if (error) {
         console.error("Insert error:", error);
@@ -453,10 +430,9 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
 
       toast({
         title: "Venue onboarding completed!",
-        description: "Welcome to SanskaraAi! Your venue profile has been created.",
+        description: "Your venue has been successfully registered with SanskaraAI.",
       });
 
-      await refreshVendorProfile();
       onComplete();
     } catch (error: any) {
       console.error('Venue onboarding error:', error);
@@ -470,15 +446,24 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
     }
   };
 
+  const handleArrayToggle = (value: string, array: string[], setter: (arr: string[]) => void) => {
+    if (array.includes(value)) {
+      setter(array.filter(item => item !== value));
+    } else {
+      setter([...array, value]);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            SanskaraAi Venue Onboarding
+            SanskaraAI Venue Onboarding Form
           </h1>
           <p className="text-gray-600">
-            Welcome! Please provide complete details about your venue. This will take 15-20 minutes.
+            Welcome! This form collects complete details about your venue for onboarding into SanskaraAI's platform.
+            Please take 15–20 minutes to fill out this form accurately.
           </p>
         </div>
 
@@ -496,7 +481,7 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
                     : 'bg-gray-200 text-gray-500'
                   }`}
               >
-                {currentStep > i + 1 ? <CheckCircle className="w-4 h-4" /> : i + 1}
+                {i + 1}
               </div>
             ))}
           </div>
@@ -511,87 +496,87 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
             {currentStep === 1 && (
               <div className="space-y-6">
                 <CardTitle>Basic Information</CardTitle>
+                
                 <div className="grid gap-4">
                   <div>
                     <Label htmlFor="venueName">Venue Name *</Label>
                     <Input
                       id="venueName"
-                      value={formData.venueName}
-                      onChange={(e) => handleInputChange('venueName', e.target.value)}
-                      placeholder="Enter your venue name"
+                      value={venueName}
+                      onChange={(e) => setVenueName(e.target.value)}
+                      placeholder="Enter venue name"
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="fullAddress">Full Address with Pin Code *</Label>
                     <Textarea
                       id="fullAddress"
-                      value={formData.fullAddress}
-                      onChange={(e) => handleInputChange('fullAddress', e.target.value)}
-                      placeholder="Enter complete address with pin code"
+                      value={fullAddress}
+                      onChange={(e) => setFullAddress(e.target.value)}
+                      placeholder="Complete address with pin code"
                       rows={3}
                       required
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="contactPersonName">Contact Person Name *</Label>
+                      <Label htmlFor="contactPerson">Contact Person Name *</Label>
                       <Input
-                        id="contactPersonName"
-                        value={formData.contactPersonName}
-                        onChange={(e) => handleInputChange('contactPersonName', e.target.value)}
+                        id="contactPerson"
+                        value={contactPerson}
+                        onChange={(e) => setContactPerson(e.target.value)}
                         placeholder="Owner/Manager name"
                         required
                       />
                     </div>
-                    
+
                     <div>
-                      <Label htmlFor="phoneNumbers">Direct Phone Number(s) *</Label>
+                      <Label htmlFor="phoneNumber">Direct Phone Number *</Label>
                       <Input
-                        id="phoneNumbers"
-                        value={formData.phoneNumbers}
-                        onChange={(e) => handleInputChange('phoneNumbers', e.target.value)}
-                        placeholder="+91 98765 43210"
+                        id="phoneNumber"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="Contact number"
                         required
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="email">Email Address *</Label>
                       <Input
                         id="email"
                         type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        placeholder="venue@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="contact@venue.com"
                         required
                       />
                     </div>
-                    
+
                     <div>
-                      <Label htmlFor="yearsInOperation">Years in Operation *</Label>
+                      <Label htmlFor="website">Website or Social Media Links</Label>
                       <Input
-                        id="yearsInOperation"
-                        value={formData.yearsInOperation}
-                        onChange={(e) => handleInputChange('yearsInOperation', e.target.value)}
-                        placeholder="e.g., 2015 or 8 years"
-                        required
+                        id="website"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        placeholder="Website URL or social media"
                       />
                     </div>
                   </div>
-                  
+
                   <div>
-                    <Label htmlFor="websiteLinks">Website or Social Media Links</Label>
-                    <Textarea
-                      id="websiteLinks"
-                      value={formData.websiteLinks}
-                      onChange={(e) => handleInputChange('websiteLinks', e.target.value)}
-                      placeholder="Website, Instagram, Facebook links (optional)"
-                      rows={2}
+                    <Label htmlFor="yearsInOperation">Years in Operation / Establishment Year *</Label>
+                    <Input
+                      id="yearsInOperation"
+                      value={yearsInOperation}
+                      onChange={(e) => setYearsInOperation(e.target.value)}
+                      placeholder="e.g., 2010 or 15 years"
+                      required
                     />
                   </div>
                 </div>
@@ -603,194 +588,192 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <CardTitle>Venue Space / Hall Details</CardTitle>
-                  <Button onClick={addHall} variant="outline" size="sm">
-                    Add Another Hall
+                  <Button onClick={addHall} size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Hall
                   </Button>
                 </div>
-                
-                {formData.halls.map((hall, index) => (
-                  <Card key={index} className="p-4 border-2">
+
+                {halls.map((hall, index) => (
+                  <Card key={index} className="p-4">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Hall {index + 1}</h3>
-                      {formData.halls.length > 1 && (
-                        <Button onClick={() => removeHall(index)} variant="destructive" size="sm">
-                          Remove
+                      {halls.length > 1 && (
+                        <Button onClick={() => removeHall(index)} size="sm" variant="destructive">
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
-                    
+
                     <div className="grid gap-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>Hall Name/Identifier *</Label>
+                          <Label>Name/Identifier of Hall *</Label>
                           <Input
-                            value={hall.hallName}
-                            onChange={(e) => updateHall(index, 'hallName', e.target.value)}
+                            value={hall.name}
+                            onChange={(e) => updateHall(index, 'name', e.target.value)}
                             placeholder="e.g., Main Hall, Lawn 1"
-                            required
                           />
                         </div>
-                        
+
                         <div>
                           <Label>Type of Space *</Label>
-                          <Select value={hall.spaceType} onValueChange={(value) => updateHall(index, 'spaceType', value)}>
+                          <Select value={hall.type} onValueChange={(value) => updateHall(index, 'type', value)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select space type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="banquet_hall">Banquet Hall</SelectItem>
-                              <SelectItem value="open_lawn">Open Lawn</SelectItem>
-                              <SelectItem value="rooftop">Rooftop</SelectItem>
-                              <SelectItem value="auditorium">Auditorium</SelectItem>
-                              <SelectItem value="poolside">Poolside</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="Banquet Hall">Banquet Hall</SelectItem>
+                              <SelectItem value="Open Lawn">Open Lawn</SelectItem>
+                              <SelectItem value="Rooftop">Rooftop</SelectItem>
+                              <SelectItem value="Auditorium">Auditorium</SelectItem>
+                              <SelectItem value="Poolside">Poolside</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
-                      
-                      {hall.spaceType === 'other' && (
+
+                      {hall.type === 'Other' && (
                         <div>
-                          <Label>Specify Other Space Type</Label>
+                          <Label>Specify Other Type</Label>
                           <Input
-                            value={hall.otherSpaceType}
-                            onChange={(e) => updateHall(index, 'otherSpaceType', e.target.value)}
-                            placeholder="Specify the space type"
+                            value={hall.custom_type}
+                            onChange={(e) => updateHall(index, 'custom_type', e.target.value)}
+                            placeholder="Specify the type of space"
                           />
                         </div>
                       )}
-                      
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label>Theatre Style Capacity</Label>
-                          <Input
-                            type="number"
-                            value={hall.theatreCapacity}
-                            onChange={(e) => updateHall(index, 'theatreCapacity', e.target.value)}
-                            placeholder="Number of people"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Round Table/Banquet Capacity</Label>
-                          <Input
-                            type="number"
-                            value={hall.banquetCapacity}
-                            onChange={(e) => updateHall(index, 'banquetCapacity', e.target.value)}
-                            placeholder="Number of people"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Floating Crowd Capacity</Label>
-                          <Input
-                            type="number"
-                            value={hall.floatingCapacity}
-                            onChange={(e) => updateHall(index, 'floatingCapacity', e.target.value)}
-                            placeholder="Number of people"
-                          />
+
+                      <div>
+                        <Label>Seating Capacity</Label>
+                        <div className="grid grid-cols-3 gap-4 mt-2">
+                          <div>
+                            <Label className="text-sm">Theatre Style</Label>
+                            <Input
+                              type="number"
+                              value={hall.seating_capacity.theatre_style}
+                              onChange={(e) => updateHall(index, 'seating_capacity.theatre_style', parseInt(e.target.value) || 0)}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">Round Table</Label>
+                            <Input
+                              type="number"
+                              value={hall.seating_capacity.round_table}
+                              onChange={(e) => updateHall(index, 'seating_capacity.round_table', parseInt(e.target.value) || 0)}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">Floating Crowd</Label>
+                            <Input
+                              type="number"
+                              value={hall.seating_capacity.floating_crowd}
+                              onChange={(e) => updateHall(index, 'seating_capacity.floating_crowd', parseInt(e.target.value) || 0)}
+                              placeholder="0"
+                            />
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
+
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2">
                           <Checkbox
-                            id={`separateDining-${index}`}
-                            checked={hall.separateDining}
-                            onCheckedChange={(checked) => updateHall(index, 'separateDining', checked)}
+                            id={`dining-${index}`}
+                            checked={hall.dining.separate_dining_hall}
+                            onCheckedChange={(checked) => updateHall(index, 'dining.separate_dining_hall', checked)}
                           />
-                          <Label htmlFor={`separateDining-${index}`}>Separate Dining Hall?</Label>
+                          <Label htmlFor={`dining-${index}`}>Separate Dining Hall</Label>
                         </div>
-                        
-                        {hall.separateDining && (
+                        {hall.dining.separate_dining_hall && (
                           <div>
                             <Label>Dining Capacity</Label>
                             <Input
                               type="number"
-                              value={hall.diningCapacity}
-                              onChange={(e) => updateHall(index, 'diningCapacity', e.target.value)}
-                              placeholder="Number of people"
+                              value={hall.dining.dining_capacity}
+                              onChange={(e) => updateHall(index, 'dining.dining_capacity', parseInt(e.target.value) || 0)}
+                              placeholder="Dining capacity"
                             />
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>Area/Dimensions (Sq. Ft or Sq. M)</Label>
+                          <Label>Area/Dimensions (Sq. Ft.)</Label>
                           <Input
-                            value={hall.areaDimensions}
-                            onChange={(e) => updateHall(index, 'areaDimensions', e.target.value)}
-                            placeholder="e.g., 2000 sq ft or 50x40 ft"
+                            value={hall.area_sqft}
+                            onChange={(e) => updateHall(index, 'area_sqft', e.target.value)}
+                            placeholder="e.g., 2000 sq ft"
                           />
                         </div>
-                        
+
                         <div>
                           <Label>Air Conditioning</Label>
-                          <Select value={hall.acType} onValueChange={(value) => updateHall(index, 'acType', value)}>
+                          <Select value={hall.air_conditioning} onValueChange={(value) => updateHall(index, 'air_conditioning', value)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select AC type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="no_ac">No AC</SelectItem>
-                              <SelectItem value="window_ac">Window ACs</SelectItem>
-                              <SelectItem value="split_ac">Split ACs</SelectItem>
-                              <SelectItem value="centralized_ac">Centralized AC</SelectItem>
+                              <SelectItem value="No AC">No AC</SelectItem>
+                              <SelectItem value="Window ACs">Window ACs</SelectItem>
+                              <SelectItem value="Split ACs">Split ACs</SelectItem>
+                              <SelectItem value="Centralized AC">Centralized AC</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
+
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2">
                           <Checkbox
-                            id={`stageAvailable-${index}`}
-                            checked={hall.stageAvailable}
-                            onCheckedChange={(checked) => updateHall(index, 'stageAvailable', checked)}
+                            id={`stage-${index}`}
+                            checked={hall.stage.available}
+                            onCheckedChange={(checked) => updateHall(index, 'stage.available', checked)}
                           />
-                          <Label htmlFor={`stageAvailable-${index}`}>Stage Available?</Label>
+                          <Label htmlFor={`stage-${index}`}>Stage Available</Label>
                         </div>
-                        
-                        {hall.stageAvailable && (
+                        {hall.stage.available && (
                           <div>
                             <Label>Stage Dimensions</Label>
                             <Input
-                              value={hall.stageDimensions}
-                              onChange={(e) => updateHall(index, 'stageDimensions', e.target.value)}
-                              placeholder="e.g., 20x15 ft"
+                              value={hall.stage.dimensions}
+                              onChange={(e) => updateHall(index, 'stage.dimensions', e.target.value)}
+                              placeholder="e.g., 20ft x 15ft"
                             />
                           </div>
                         )}
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
+
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2">
                           <Checkbox
-                            id={`danceFloorAvailable-${index}`}
-                            checked={hall.danceFloorAvailable}
-                            onCheckedChange={(checked) => updateHall(index, 'danceFloorAvailable', checked)}
+                            id={`dance-${index}`}
+                            checked={hall.dance_floor.available}
+                            onCheckedChange={(checked) => updateHall(index, 'dance_floor.available', checked)}
                           />
-                          <Label htmlFor={`danceFloorAvailable-${index}`}>Dance Floor Available?</Label>
+                          <Label htmlFor={`dance-${index}`}>Dance Floor Available</Label>
                         </div>
-                        
-                        {hall.danceFloorAvailable && (
+                        {hall.dance_floor.available && (
                           <div>
-                            <Label>Dance Floor Size (Sq. Ft)</Label>
+                            <Label>Dance Floor Size (Sq. Ft.)</Label>
                             <Input
-                              value={hall.danceFloorSize}
-                              onChange={(e) => updateHall(index, 'danceFloorSize', e.target.value)}
+                              value={hall.dance_floor.size_sqft}
+                              onChange={(e) => updateHall(index, 'dance_floor.size_sqft', e.target.value)}
                               placeholder="e.g., 400 sq ft"
                             />
                           </div>
                         )}
                       </div>
-                      
+
                       <div>
                         <Label>Ambience/Lighting/Natural Light Description</Label>
                         <Textarea
-                          value={hall.ambienceDescription}
-                          onChange={(e) => updateHall(index, 'ambienceDescription', e.target.value)}
-                          placeholder="Describe the ambience, lighting, natural light, pillars, etc."
+                          value={hall.ambience_description}
+                          onChange={(e) => updateHall(index, 'ambience_description', e.target.value)}
+                          placeholder="Describe the ambience, lighting, and natural light features"
                           rows={3}
                         />
                       </div>
@@ -804,7 +787,7 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
             {currentStep === 3 && (
               <div className="space-y-6">
                 <CardTitle>Pricing, Catering, and Packages</CardTitle>
-                
+
                 {/* Rental Charges */}
                 <Card className="p-4">
                   <h3 className="text-lg font-semibold mb-4">Rental & Booking Charges</h3>
@@ -813,784 +796,635 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="rentalIncluded"
-                        checked={formData.rentalIncludedInCatering}
-                        onCheckedChange={(checked) => handleInputChange('rentalIncludedInCatering', checked)}
+                        checked={rentalIncludedInCatering}
+                        onCheckedChange={setRentalIncludedInCatering}
                       />
-                      <Label htmlFor="rentalIncluded">Rental Included in Catering Charges?</Label>
+                      <Label htmlFor="rentalIncluded">Is Rental Included in Catering Charges?</Label>
                     </div>
-                    
-                    {!formData.rentalIncludedInCatering && (
-                      <>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <Label>Weekday Rate (Mon-Thu) ₹</Label>
-                            <Input
-                              type="number"
-                              value={formData.weekdayRate}
-                              onChange={(e) => handleInputChange('weekdayRate', e.target.value)}
-                              placeholder="Amount"
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label>Weekend Rate (Fri-Sun) ₹</Label>
-                            <Input
-                              type="number"
-                              value={formData.weekendRate}
-                              onChange={(e) => handleInputChange('weekendRate', e.target.value)}
-                              placeholder="Amount"
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label>Auspicious/Festival Dates Rate ₹</Label>
-                            <Input
-                              type="number"
-                              value={formData.festivalRate}
-                              onChange={(e) => handleInputChange('festivalRate', e.target.value)}
-                              placeholder="Amount"
-                            />
-                          </div>
-                        </div>
-                        
+
+                    {!rentalIncludedInCatering && (
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <Label>Rental Duration Options</Label>
-                          <div className="grid grid-cols-3 gap-4 mt-2">
-                            {['Half Day', 'Full Day', 'Per Hour'].map(option => (
-                              <div key={option} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={option}
-                                  checked={formData.durationOptions.includes(option)}
-                                  onCheckedChange={() => handleArrayToggle('durationOptions', option)}
-                                />
-                                <Label htmlFor={option}>{option}</Label>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {formData.durationOptions.includes('Per Hour') && (
-                            <div className="mt-2">
-                              <Label>Rate per hour ₹</Label>
-                              <Input
-                                type="number"
-                                value={formData.hourlyRate}
-                                onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
-                                placeholder="Amount per hour"
-                              />
-                            </div>
-                          )}
+                          <Label>Weekday Rate (Mon–Thu) ₹</Label>
+                          <Input
+                            value={weekdayRate}
+                            onChange={(e) => setWeekdayRate(e.target.value)}
+                            placeholder="e.g., 50000"
+                          />
                         </div>
-                        
                         <div>
-                          <Label>What is Included in the Basic Rental?</Label>
-                          <div className="grid grid-cols-2 gap-4 mt-2">
-                            {['Tables & Chairs', 'Basic Lighting', 'Power Backup', 'Cleaning & Maintenance'].map(item => (
-                              <div key={item} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={item}
-                                  checked={formData.basicRentalIncludes.includes(item)}
-                                  onCheckedChange={() => handleArrayToggle('basicRentalIncludes', item)}
-                                />
-                                <Label htmlFor={item}>{item}</Label>
-                              </div>
-                            ))}
-                          </div>
+                          <Label>Weekend Rate (Fri–Sun) ₹</Label>
+                          <Input
+                            value={weekendRate}
+                            onChange={(e) => setWeekendRate(e.target.value)}
+                            placeholder="e.g., 75000"
+                          />
                         </div>
-                      </>
+                        <div>
+                          <Label>Auspicious/Festival Dates Rate ₹</Label>
+                          <Input
+                            value={festivalRate}
+                            onChange={(e) => setFestivalRate(e.target.value)}
+                            placeholder="e.g., 100000"
+                          />
+                        </div>
+                      </div>
                     )}
+
+                    <div>
+                      <Label>Rental Duration Options</Label>
+                      <div className="grid grid-cols-3 gap-4 mt-2">
+                        {['Half Day', 'Full Day', 'Per Hour'].map((option) => (
+                          <div key={option} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={option}
+                              checked={durationOptions.includes(option)}
+                              onCheckedChange={() => handleArrayToggle(option, durationOptions, setDurationOptions)}
+                            />
+                            <Label htmlFor={option}>{option}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {durationOptions.includes('Per Hour') && (
+                      <div>
+                        <Label>Rate per hour ₹</Label>
+                        <Input
+                          value={hourlyRate}
+                          onChange={(e) => setHourlyRate(e.target.value)}
+                          placeholder="e.g., 5000"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <Label>What is Included in the Basic Rental?</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {['Tables & Chairs', 'Basic Lighting', 'Power Backup', 'Cleaning & Maintenance'].map((item) => (
+                          <div key={item} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={item}
+                              checked={basicRentalIncludes.includes(item)}
+                              onCheckedChange={() => handleArrayToggle(item, basicRentalIncludes, setBasicRentalIncludes)}
+                            />
+                            <Label htmlFor={item}>{item}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </Card>
-                
+
                 {/* Food & Catering */}
                 <Card className="p-4">
                   <h3 className="text-lg font-semibold mb-4">Food & Catering</h3>
                   
                   <div className="space-y-4">
                     <div>
-                      <Label>Catering Options Allowed *</Label>
-                      <Select value={formData.cateringOptions} onValueChange={(value) => handleInputChange('cateringOptions', value)}>
+                      <Label>Catering Options Allowed</Label>
+                      <Select value={cateringOptions} onValueChange={setCateringOptions}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select catering option" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inhouse_only">In-house Catering Only</SelectItem>
-                          <SelectItem value="outside_allowed">Outside Caterers Allowed</SelectItem>
-                          <SelectItem value="both_allowed">Both Allowed</SelectItem>
+                          <SelectItem value="In-house Catering Only">In-house Catering Only</SelectItem>
+                          <SelectItem value="Outside Caterers Allowed">Outside Caterers Allowed</SelectItem>
+                          <SelectItem value="Both Allowed">Both Allowed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    {(formData.cateringOptions === 'outside_allowed' || formData.cateringOptions === 'both_allowed') && (
-                      <>
+
+                    {(cateringOptions === 'Outside Caterers Allowed' || cateringOptions === 'Both Allowed') && (
+                      <div className="space-y-4">
                         <div>
-                          <Label>Outside Caterers - Tie-ups or Approved Vendors</Label>
+                          <Label>Any Tie-Ups or Approved Vendors?</Label>
                           <Textarea
-                            value={formData.outsideCaterersInfo}
-                            onChange={(e) => handleInputChange('outsideCaterersInfo', e.target.value)}
-                            placeholder="List any approved vendors or tie-ups"
+                            value={approvedVendors}
+                            onChange={(e) => setApprovedVendors(e.target.value)}
+                            placeholder="List approved caterers or mention tie-ups"
                             rows={2}
                           />
                         </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
+
+                        <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-2">
                             <Checkbox
                               id="royaltyFee"
-                              checked={formData.royaltyFee}
-                              onCheckedChange={(checked) => handleInputChange('royaltyFee', checked)}
+                              checked={royaltyFee}
+                              onCheckedChange={setRoyaltyFee}
                             />
                             <Label htmlFor="royaltyFee">Royalty Fee Charged?</Label>
                           </div>
-                          
+
                           <div className="flex items-center space-x-2">
                             <Checkbox
                               id="kitchenAccess"
-                              checked={formData.kitchenAccess}
-                              onCheckedChange={(checked) => handleInputChange('kitchenAccess', checked)}
+                              checked={kitchenAccess}
+                              onCheckedChange={setKitchenAccess}
                             />
                             <Label htmlFor="kitchenAccess">Kitchen Access Provided?</Label>
                           </div>
                         </div>
-                      </>
+                      </div>
                     )}
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Veg Standard Range ₹ (Min - Max)</Label>
-                        <Input
-                          value={formData.vegStandardRange}
-                          onChange={(e) => handleInputChange('vegStandardRange', e.target.value)}
-                          placeholder="e.g., 300 - 500"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label>Veg Deluxe Range ₹ (Min - Max)</Label>
-                        <Input
-                          value={formData.vegDeluxeRange}
-                          onChange={(e) => handleInputChange('vegDeluxeRange', e.target.value)}
-                          placeholder="e.g., 500 - 800"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Non-Veg Standard Range ₹ (Min - Max)</Label>
-                        <Input
-                          value={formData.nonVegStandardRange}
-                          onChange={(e) => handleInputChange('nonVegStandardRange', e.target.value)}
-                          placeholder="e.g., 400 - 600"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label>Non-Veg Deluxe Range ₹ (Min - Max)</Label>
-                        <Input
-                          value={formData.nonVegDeluxeRange}
-                          onChange={(e) => handleInputChange('nonVegDeluxeRange', e.target.value)}
-                          placeholder="e.g., 600 - 1000"
-                        />
+
+                    <div>
+                      <Label>Price Per Plate (Veg)</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <Label className="text-sm">Standard Range Min ₹</Label>
+                          <Input
+                            value={vegPriceMin}
+                            onChange={(e) => setVegPriceMin(e.target.value)}
+                            placeholder="e.g., 300"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Standard Range Max ₹</Label>
+                          <Input
+                            value={vegPriceMax}
+                            onChange={(e) => setVegPriceMax(e.target.value)}
+                            placeholder="e.g., 500"
+                          />
+                        </div>
                       </div>
                     </div>
-                    
+
+                    <div>
+                      <Label>Price Per Plate (Non-Veg)</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <Label className="text-sm">Standard Range Min ₹</Label>
+                          <Input
+                            value={nonVegPriceMin}
+                            onChange={(e) => setNonVegPriceMin(e.target.value)}
+                            placeholder="e.g., 400"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Standard Range Max ₹</Label>
+                          <Input
+                            value={nonVegPriceMax}
+                            onChange={(e) => setNonVegPriceMax(e.target.value)}
+                            placeholder="e.g., 700"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
                       <Label>Cuisine Specialties Offered</Label>
-                      <div className="grid grid-cols-3 gap-4 mt-2">
-                        {['North Indian', 'South Indian', 'Chinese', 'Continental', 'Live Counters', 'Jain Food', 'Satvic Food'].map(cuisine => (
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {['North Indian', 'South Indian', 'Chinese', 'Continental', 'Live Counters', 'Jain Food', 'Satvic Food'].map((cuisine) => (
                           <div key={cuisine} className="flex items-center space-x-2">
                             <Checkbox
                               id={cuisine}
-                              checked={formData.cuisineSpecialties.includes(cuisine)}
-                              onCheckedChange={() => handleArrayToggle('cuisineSpecialties', cuisine)}
+                              checked={cuisineSpecialties.includes(cuisine)}
+                              onCheckedChange={() => handleArrayToggle(cuisine, cuisineSpecialties, setCuisineSpecialties)}
                             />
                             <Label htmlFor={cuisine}>{cuisine}</Label>
                           </div>
                         ))}
                       </div>
                     </div>
-                    
+
                     <div>
                       <Label>Menu Customization Allowed?</Label>
-                      <RadioGroup value={formData.menuCustomization} onValueChange={(value) => handleInputChange('menuCustomization', value)}>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="yes" id="customization-yes" />
-                          <Label htmlFor="customization-yes">Yes</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="no" id="customization-no" />
-                          <Label htmlFor="customization-no">No</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="partial" id="customization-partial" />
-                          <Label htmlFor="customization-partial">Partial</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {/* Step 4: Alcohol & Decoration */}
-            {currentStep === 4 && (
-              <div className="space-y-6">
-                <CardTitle>Alcohol Policy & Decoration</CardTitle>
-                
-                {/* Alcohol Policy */}
-                <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Alcohol Policy</h3>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="alcoholAllowed"
-                          checked={formData.alcoholAllowed}
-                          onCheckedChange={(checked) => handleInputChange('alcoholAllowed', checked)}
-                        />
-                        <Label htmlFor="alcoholAllowed">Alcohol Allowed?</Label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="inHouseBar"
-                          checked={formData.inHouseBar}
-                          onCheckedChange={(checked) => handleInputChange('inHouseBar', checked)}
-                        />
-                        <Label htmlFor="inHouseBar">In-house Bar Available?</Label>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="permitRequired"
-                          checked={formData.permitRequired}
-                          onCheckedChange={(checked) => handleInputChange('permitRequired', checked)}
-                        />
-                        <Label htmlFor="permitRequired">Permit Required?</Label>
-                      </div>
-                      
-                      <div>
-                        <Label>Corkage Fee (if applicable)</Label>
-                        <Input
-                          value={formData.corkageFee}
-                          onChange={(e) => handleInputChange('corkageFee', e.target.value)}
-                          placeholder="e.g., ₹500 per bottle or No"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-                
-                {/* Decoration */}
-                <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Decoration</h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Decoration Options</Label>
-                      <Select value={formData.decorationOptions} onValueChange={(value) => handleInputChange('decorationOptions', value)}>
+                      <Select value={menuCustomization} onValueChange={setMenuCustomization}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select decoration option" />
+                          <SelectValue placeholder="Select customization level" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inhouse_only">In-house Decorator Only</SelectItem>
-                          <SelectItem value="outside_allowed">Outside Decorators Allowed</SelectItem>
-                          <SelectItem value="both_allowed">Both Allowed</SelectItem>
+                          <SelectItem value="Yes">Yes</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                          <SelectItem value="Partial">Partial</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    {(formData.decorationOptions === 'outside_allowed' || formData.decorationOptions === 'both_allowed') && (
-                      <div>
-                        <Label>Restrictions for Outside Decorators</Label>
-                        <Textarea
-                          value={formData.outsideDecoratorRestrictions}
-                          onChange={(e) => handleInputChange('outsideDecoratorRestrictions', e.target.value)}
-                          placeholder="Any restrictions or guidelines for outside decorators"
-                          rows={2}
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="basicDecorIncluded"
-                        checked={formData.basicDecorIncluded}
-                        onCheckedChange={(checked) => handleInputChange('basicDecorIncluded', checked)}
-                      />
-                      <Label htmlFor="basicDecorIncluded">Basic Decor Included?</Label>
-                    </div>
-                    
-                    {formData.basicDecorIncluded && (
-                      <div>
-                        <Label>What's Included in Basic Decor?</Label>
-                        <Input
-                          value={formData.basicDecorDetails}
-                          onChange={(e) => handleInputChange('basicDecorDetails', e.target.value)}
-                          placeholder="e.g., Basic lighting, table covers, centerpieces"
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Standard Decor Package Range ₹ (Min - Max)</Label>
-                        <Input
-                          value={formData.decorPackageRange}
-                          onChange={(e) => handleInputChange('decorPackageRange', e.target.value)}
-                          placeholder="e.g., 10000 - 50000"
-                        />
-                      </div>
-                      
-                      <div className="flex items-center space-x-2 mt-6">
-                        <Checkbox
-                          id="decorCustomization"
-                          checked={formData.decorCustomization}
-                          onCheckedChange={(checked) => handleInputChange('decorCustomization', checked)}
-                        />
-                        <Label htmlFor="decorCustomization">Customization Allowed?</Label>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label>Themes/Styles Offered</Label>
-                      <Textarea
-                        value={formData.decorThemes}
-                        onChange={(e) => handleInputChange('decorThemes', e.target.value)}
-                        placeholder="List themes and styles available"
-                        rows={2}
-                      />
-                    </div>
-                    
-                    {formData.decorCustomization && (
-                      <div>
-                        <Label>Popular Themes with Price Range</Label>
-                        <Textarea
-                          value={formData.popularThemes}
-                          onChange={(e) => handleInputChange('popularThemes', e.target.value)}
-                          placeholder="e.g., Royal Theme (₹25000-50000), Garden Theme (₹15000-30000)"
-                          rows={2}
-                        />
-                      </div>
-                    )}
                   </div>
                 </Card>
               </div>
             )}
 
-            {/* Step 5: Taxes, Payment & Amenities */}
-            {currentStep === 5 && (
+            {/* Step 4: Amenities & Event Services */}
+            {currentStep === 4 && (
               <div className="space-y-6">
-                <CardTitle>Taxes, Payment & Amenities</CardTitle>
-                
-                {/* Taxes & Payment */}
+                <CardTitle>Amenities & Event Services</CardTitle>
+
+                {/* Parking */}
                 <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Taxes & Payment</h3>
+                  <h3 className="text-lg font-semibold mb-4">Parking</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Capacity (Cars)</Label>
+                      <Input
+                        type="number"
+                        value={carCapacity}
+                        onChange={(e) => setCarCapacity(e.target.value)}
+                        placeholder="e.g., 50"
+                      />
+                    </div>
+                    <div>
+                      <Label>Capacity (2-Wheelers)</Label>
+                      <Input
+                        type="number"
+                        value={twoWheelerCapacity}
+                        onChange={(e) => setTwoWheelerCapacity(e.target.value)}
+                        placeholder="e.g., 100"
+                      />
+                    </div>
+                  </div>
                   
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="gstApplied"
-                          checked={formData.gstApplied}
-                          onCheckedChange={(checked) => handleInputChange('gstApplied', checked)}
-                        />
-                        <Label htmlFor="gstApplied">GST Applied?</Label>
-                      </div>
-                      
-                      {formData.gstApplied && (
-                        <div>
-                          <Label>GST %</Label>
-                          <Input
-                            value={formData.gstPercentage}
-                            onChange={(e) => handleInputChange('gstPercentage', e.target.value)}
-                            placeholder="e.g., 18"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <Label>Other Charges/Hidden Fees (if any)</Label>
-                      <Textarea
-                        value={formData.otherCharges}
-                        onChange={(e) => handleInputChange('otherCharges', e.target.value)}
-                        placeholder="Any additional charges not mentioned above"
-                        rows={2}
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="valetParking"
+                        checked={valetParking}
+                        onCheckedChange={setValetParking}
                       />
+                      <Label htmlFor="valetParking">Valet Parking Available?</Label>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    {valetParking && (
                       <div>
-                        <Label>Advance Booking Amount</Label>
+                        <Label>Additional Cost ₹</Label>
                         <Input
-                          value={formData.advanceAmount}
-                          onChange={(e) => handleInputChange('advanceAmount', e.target.value)}
-                          placeholder="e.g., 25% of total or ₹50000"
+                          value={valetCost}
+                          onChange={(e) => setValetCost(e.target.value)}
+                          placeholder="e.g., 100 per car"
                         />
                       </div>
-                      
-                      <div>
-                        <Label>Payment Terms & Schedule</Label>
-                        <Textarea
-                          value={formData.paymentTerms}
-                          onChange={(e) => handleInputChange('paymentTerms', e.target.value)}
-                          placeholder="When is payment due? (booking, before event, etc.)"
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-                    
+                    )}
+                  </div>
+                </Card>
+
+                {/* Rooms */}
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Rooms Availability</h3>
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <Label>Cancellation & Refund Policy</Label>
-                      <Textarea
-                        value={formData.cancellationPolicy}
-                        onChange={(e) => handleInputChange('cancellationPolicy', e.target.value)}
-                        placeholder="Explain cancellation terms and refund policy"
-                        rows={3}
+                      <Label>Total Rooms Available</Label>
+                      <Input
+                        type="number"
+                        value={totalRooms}
+                        onChange={(e) => setTotalRooms(e.target.value)}
+                        placeholder="e.g., 10"
                       />
                     </div>
-                    
                     <div>
-                      <Label>Accepted Payment Modes</Label>
-                      <div className="grid grid-cols-3 gap-4 mt-2">
-                        {['UPI', 'Bank Transfer', 'Credit/Debit Cards', 'Cash', 'Cheque'].map(mode => (
-                          <div key={mode} className="flex items-center space-x-2">
+                      <Label>AC Rooms</Label>
+                      <Input
+                        type="number"
+                        value={acRooms}
+                        onChange={(e) => setAcRooms(e.target.value)}
+                        placeholder="e.g., 6"
+                      />
+                    </div>
+                    <div>
+                      <Label>Non-AC Rooms</Label>
+                      <Input
+                        type="number"
+                        value={nonAcRooms}
+                        onChange={(e) => setNonAcRooms(e.target.value)}
+                        placeholder="e.g., 4"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="complimentaryRooms"
+                        checked={complimentaryRooms}
+                        onCheckedChange={setComplimentaryRooms}
+                      />
+                      <Label htmlFor="complimentaryRooms">Complimentary Rooms Offered?</Label>
+                    </div>
+
+                    <div>
+                      <Label>Extra Room Charges ₹</Label>
+                      <Input
+                        value={extraRoomCharges}
+                        onChange={(e) => setExtraRoomCharges(e.target.value)}
+                        placeholder="e.g., 2000 per night"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Room Amenities</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {['AC/Fan', 'Attached Washroom', 'Geyser', 'Wardrobe'].map((amenity) => (
+                          <div key={amenity} className="flex items-center space-x-2">
                             <Checkbox
-                              id={mode}
-                              checked={formData.paymentModes.includes(mode)}
-                              onCheckedChange={() => handleArrayToggle('paymentModes', mode)}
+                              id={amenity}
+                              checked={roomAmenities.includes(amenity)}
+                              onCheckedChange={() => handleArrayToggle(amenity, roomAmenities, setRoomAmenities)}
                             />
-                            <Label htmlFor={mode}>{mode}</Label>
+                            <Label htmlFor={amenity}>{amenity}</Label>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
                 </Card>
-                
-                {/* Amenities */}
+
+                {/* Power Backup */}
                 <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Amenities & Facilities</h3>
-                  
+                  <h3 className="text-lg font-semibold mb-4">Power Backup Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Generator Capacity (kVA)</Label>
+                      <Input
+                        value={generatorCapacity}
+                        onChange={(e) => setGeneratorCapacity(e.target.value)}
+                        placeholder="e.g., 100 kVA"
+                      />
+                    </div>
+                    <div>
+                      <Label>Duration Supported (Hours)</Label>
+                      <Input
+                        value={backupDuration}
+                        onChange={(e) => setBackupDuration(e.target.value)}
+                        placeholder="e.g., 8 hours"
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Audio/Visual Equipment */}
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Audio/Visual Equipment</h3>
                   <div className="space-y-4">
-                    {/* Parking */}
                     <div>
-                      <h4 className="font-medium mb-2">Parking</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Car Parking Capacity</Label>
-                          <Input
-                            type="number"
-                            value={formData.carParkingCapacity}
-                            onChange={(e) => handleInputChange('carParkingCapacity', e.target.value)}
-                            placeholder="Number of cars"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>2-Wheeler Parking Capacity</Label>
-                          <Input
-                            type="number"
-                            value={formData.bikesParkingCapacity}
-                            onChange={(e) => handleInputChange('bikesParkingCapacity', e.target.value)}
-                            placeholder="Number of bikes"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mt-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="valetParking"
-                            checked={formData.valetParking}
-                            onCheckedChange={(checked) => handleInputChange('valetParking', checked)}
-                          />
-                          <Label htmlFor="valetParking">Valet Parking Available?</Label>
-                        </div>
-                        
-                        {formData.valetParking && (
-                          <div>
-                            <Label>Valet Cost ₹</Label>
-                            <Input
-                              value={formData.valetCost}
-                              onChange={(e) => handleInputChange('valetCost', e.target.value)}
-                              placeholder="Additional cost for valet"
-                            />
-                          </div>
-                        )}
-                      </div>
+                      <Label>Sound System</Label>
+                      <Select value={soundSystem} onValueChange={setSoundSystem}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sound system option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Included">Included</SelectItem>
+                          <SelectItem value="Extra Cost">Extra Cost</SelectItem>
+                          <SelectItem value="Not Available">Not Available</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    
-                    {/* Rooms */}
+
                     <div>
-                      <h4 className="font-medium mb-2">Rooms Availability</h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label>Total Rooms</Label>
-                          <Input
-                            type="number"
-                            value={formData.totalRooms}
-                            onChange={(e) => handleInputChange('totalRooms', e.target.value)}
-                            placeholder="Total rooms"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>AC Rooms</Label>
-                          <Input
-                            type="number"
-                            value={formData.acRooms}
-                            onChange={(e) => handleInputChange('acRooms', e.target.value)}
-                            placeholder="AC rooms"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>Non-AC Rooms</Label>
-                          <Input
-                            type="number"
-                            value={formData.nonAcRooms}
-                            onChange={(e) => handleInputChange('nonAcRooms', e.target.value)}
-                            placeholder="Non-AC rooms"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mt-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="complimentaryRooms"
-                            checked={formData.complimentaryRooms}
-                            onCheckedChange={(checked) => handleInputChange('complimentaryRooms', checked)}
-                          />
-                          <Label htmlFor="complimentaryRooms">Complimentary Rooms Offered?</Label>
-                        </div>
-                        
-                        <div>
-                          <Label>Extra Room Charges ₹</Label>
-                          <Input
-                            value={formData.extraRoomCharges}
-                            onChange={(e) => handleInputChange('extraRoomCharges', e.target.value)}
-                            placeholder="Per room charges"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="mt-2">
-                        <Label>Room Amenities</Label>
-                        <div className="grid grid-cols-3 gap-4 mt-2">
-                          {['AC/Fan', 'Attached Washroom', 'Geyser', 'Wardrobe'].map(amenity => (
-                            <div key={amenity} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={amenity}
-                                checked={formData.roomAmenities.includes(amenity)}
-                                onCheckedChange={() => handleArrayToggle('roomAmenities', amenity)}
-                              />
-                              <Label htmlFor={amenity}>{amenity}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <Label>Projector & Screen</Label>
+                      <Select value={projectorScreen} onValueChange={setProjectorScreen}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select projector option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Included">Included</SelectItem>
+                          <SelectItem value="Extra Cost">Extra Cost</SelectItem>
+                          <SelectItem value="Not Available">Not Available</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    
-                    {/* Other Amenities */}
-                    <div className="grid grid-cols-2 gap-4">
+
+                    <div>
+                      <Label>DJ Services</Label>
+                      <Select value={djServices} onValueChange={setDjServices}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select DJ option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="In-house">In-house</SelectItem>
+                          <SelectItem value="Outside Allowed">Outside Allowed</SelectItem>
+                          <SelectItem value="Not Allowed">Not Allowed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {djServices === 'In-house' && (
                       <div>
-                        <Label>Generator Capacity (kVA)</Label>
+                        <Label>DJ Cost if In-house ₹</Label>
                         <Input
-                          value={formData.generatorCapacity}
-                          onChange={(e) => handleInputChange('generatorCapacity', e.target.value)}
-                          placeholder="e.g., 100 kVA"
+                          value={djCost}
+                          onChange={(e) => setDjCost(e.target.value)}
+                          placeholder="e.g., 15000"
                         />
                       </div>
-                      
-                      <div>
-                        <Label>Backup Duration (Hours)</Label>
-                        <Input
-                          value={formData.backupDuration}
-                          onChange={(e) => handleInputChange('backupDuration', e.target.value)}
-                          placeholder="e.g., 8 hours"
-                        />
-                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Other Facilities */}
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Other Facilities</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Number of Washrooms</Label>
+                      <Input
+                        value={numberOfWashrooms}
+                        onChange={(e) => setNumberOfWashrooms(e.target.value)}
+                        placeholder="e.g., 8"
+                      />
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-4">
+
+                    <div>
+                      <Label>Cleanliness & Accessibility Description</Label>
+                      <Textarea
+                        value={washroomDescription}
+                        onChange={(e) => setWashroomDescription(e.target.value)}
+                        placeholder="Describe washroom facilities and accessibility"
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="flex space-x-6">
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="wheelchairAccess"
-                          checked={formData.wheelchairAccess}
-                          onCheckedChange={(checked) => handleInputChange('wheelchairAccess', checked)}
+                          checked={wheelchairAccess}
+                          onCheckedChange={setWheelchairAccess}
                         />
-                        <Label htmlFor="wheelchairAccess">Wheelchair Access?</Label>
+                        <Label htmlFor="wheelchairAccess">Wheelchair Access Available?</Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id="elevatorAccess"
-                          checked={formData.elevatorAccess}
-                          onCheckedChange={(checked) => handleInputChange('elevatorAccess', checked)}
+                          id="elevator"
+                          checked={elevator}
+                          onCheckedChange={setElevator}
                         />
-                        <Label htmlFor="elevatorAccess">Elevator Access?</Label>
+                        <Label htmlFor="elevator">Elevator for Guests</Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="wifiAvailable"
-                          checked={formData.wifiAvailable}
-                          onCheckedChange={(checked) => handleInputChange('wifiAvailable', checked)}
+                          checked={wifiAvailable}
+                          onCheckedChange={setWifiAvailable}
                         />
                         <Label htmlFor="wifiAvailable">Wi-Fi Available?</Label>
                       </div>
+                    </div>
+
+                    <div>
+                      <Label>Number of Staff Provided</Label>
+                      <Input
+                        value={staffProvided}
+                        onChange={(e) => setStaffProvided(e.target.value)}
+                        placeholder="e.g., 10 staff members"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Services Covered by Staff</Label>
+                      <Textarea
+                        value={staffServices}
+                        onChange={(e) => setStaffServices(e.target.value)}
+                        placeholder="Describe what services the staff provides"
+                        rows={2}
+                      />
                     </div>
                   </div>
                 </Card>
               </div>
             )}
 
-            {/* Step 6: Cultural, AI & Final Details */}
-            {currentStep === 6 && (
+            {/* Step 5: Ritual & Cultural Support */}
+            {currentStep === 5 && (
               <div className="space-y-6">
-                <CardTitle>Cultural Support & AI Integration</CardTitle>
-                
-                {/* Ritual & Cultural */}
+                <CardTitle>Ritual & Cultural Support</CardTitle>
+
                 <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Ritual & Cultural Support</h3>
-                  
                   <div className="space-y-4">
                     <div>
-                      <Label>Fire/Hawan Ritual Allowed?</Label>
-                      <Select value={formData.fireRitualAllowed} onValueChange={(value) => handleInputChange('fireRitualAllowed', value)}>
+                      <Label>Is Fire/Hawan Ritual Allowed?</Label>
+                      <Select value={fireRitualAllowed} onValueChange={setFireRitualAllowed}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select option" />
+                          <SelectValue placeholder="Select fire ritual policy" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="indoor">Indoor</SelectItem>
-                          <SelectItem value="outdoor">Outdoor</SelectItem>
-                          <SelectItem value="not_allowed">Not Allowed</SelectItem>
+                          <SelectItem value="Indoor">Indoor</SelectItem>
+                          <SelectItem value="Outdoor">Outdoor</SelectItem>
+                          <SelectItem value="Not Allowed">Not Allowed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
                       <Label>Mandap Setup Location Preferences or Restrictions</Label>
                       <Textarea
-                        value={formData.mandapSetupInfo}
-                        onChange={(e) => handleInputChange('mandapSetupInfo', e.target.value)}
-                        placeholder="Any specific locations or restrictions for mandap setup"
-                        rows={2}
+                        value={mandapSetup}
+                        onChange={(e) => setMandapSetup(e.target.value)}
+                        placeholder="Describe mandap setup preferences, restrictions, or guidelines"
+                        rows={3}
                       />
                     </div>
                   </div>
                 </Card>
-                
-                {/* AI & Operational */}
+              </div>
+            )}
+
+            {/* Step 6: AI-Specific + Operational Data */}
+            {currentStep === 6 && (
+              <div className="space-y-6">
+                <CardTitle>AI-Specific + Operational Data</CardTitle>
+
                 <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">AI Integration & Operations</h3>
-                  
                   <div className="space-y-4">
                     <div>
                       <Label>Current Booking & Calendar Management System</Label>
-                      <Select value={formData.bookingSystem} onValueChange={(value) => handleInputChange('bookingSystem', value)}>
+                      <Select value={currentBookingSystem} onValueChange={setCurrentBookingSystem}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select your current system" />
+                          <SelectValue placeholder="Select current system" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="manual">Manual (Notebook/Phone)</SelectItem>
-                          <SelectItem value="google_calendar">Google Calendar</SelectItem>
-                          <SelectItem value="crm_software">CRM Software</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
+                          <SelectItem value="Manual (Notebook/Phone)">Manual (Notebook/Phone)</SelectItem>
+                          <SelectItem value="Google Calendar">Google Calendar</SelectItem>
+                          <SelectItem value="CRM Software">CRM Software</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <Checkbox
-                        id="aiIntegration"
-                        checked={formData.aiIntegration}
-                        onCheckedChange={(checked) => handleInputChange('aiIntegration', checked)}
+                        id="sanskaraIntegration"
+                        checked={sanskaraIntegration}
+                        onCheckedChange={setSanskaraIntegration}
                       />
-                      <Label htmlFor="aiIntegration">Willing to Integrate with SanskaraAi App/Portal?</Label>
+                      <Label htmlFor="sanskaraIntegration">Willing to Integrate with SanskaraAi App/Portal?</Label>
                     </div>
-                    
+
                     <div>
                       <Label>Unique Features / Selling Points of Your Venue</Label>
                       <Textarea
-                        value={formData.uniqueFeatures}
-                        onChange={(e) => handleInputChange('uniqueFeatures', e.target.value)}
-                        placeholder="What makes your venue special? List unique features and selling points"
+                        value={uniqueFeatures}
+                        onChange={(e) => setUniqueFeatures(e.target.value)}
+                        placeholder="What makes your venue special?"
                         rows={3}
                       />
                     </div>
-                    
+
                     <div>
-                      <Label>Ideal Client Profile</Label>
+                      <Label>Ideal Client Profile (type of events, budget preferences)</Label>
                       <Textarea
-                        value={formData.idealClientProfile}
-                        onChange={(e) => handleInputChange('idealClientProfile', e.target.value)}
-                        placeholder="Type of events, budget preferences, client demographics"
-                        rows={2}
+                        value={idealClientProfile}
+                        onChange={(e) => setIdealClientProfile(e.target.value)}
+                        placeholder="Describe your ideal clients and events"
+                        rows={3}
                       />
                     </div>
-                    
+
                     <div>
-                      <Label>Flexibility Level (1 to 5)</Label>
-                      <Select value={formData.flexibilityLevel} onValueChange={(value) => handleInputChange('flexibilityLevel', value)}>
+                      <Label>Flexibility Level (1 to 5): {flexibilityLevel}</Label>
+                      <div className="mt-2">
+                        <input
+                          type="range"
+                          min="1"
+                          max="5"
+                          value={flexibilityLevel}
+                          onChange={(e) => setFlexibilityLevel(parseInt(e.target.value))}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-sm text-gray-500 mt-1">
+                          <span>Very Rigid</span>
+                          <span>Very Flexible</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Would You Consider Allowing AI to Suggest Menu or Decor?</Label>
+                      <Select value={aiSuggestions} onValueChange={setAiSuggestions}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Rate your flexibility" />
+                          <SelectValue placeholder="Select AI preference" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">1 - Very Rigid</SelectItem>
-                          <SelectItem value="2">2 - Somewhat Rigid</SelectItem>
-                          <SelectItem value="3">3 - Moderate</SelectItem>
-                          <SelectItem value="4">4 - Flexible</SelectItem>
-                          <SelectItem value="5">5 - Very Flexible</SelectItem>
+                          <SelectItem value="Yes">Yes</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                          <SelectItem value="Needs Approval">Needs Approval</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    <div>
-                      <Label>AI Menu/Decor Suggestions</Label>
-                      <RadioGroup value={formData.aiSuggestions} onValueChange={(value) => handleInputChange('aiSuggestions', value)}>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="yes" id="ai-yes" />
-                          <Label htmlFor="ai-yes">Yes</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="no" id="ai-no" />
-                          <Label htmlFor="ai-no">No</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="needs_approval" id="ai-approval" />
-                          <Label htmlFor="ai-approval">Needs Approval</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
+
                     <div>
                       <Label>Preferred Mode of Receiving Leads/Bookings</Label>
-                      <Select value={formData.preferredLeadMode} onValueChange={(value) => handleInputChange('preferredLeadMode', value)}>
+                      <Select value={preferredLeadMode} onValueChange={setPreferredLeadMode}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select preferred communication mode" />
+                          <SelectValue placeholder="Select preferred mode" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                          <SelectItem value="email">Email</SelectItem>
-                          <SelectItem value="phone_call">Phone Call</SelectItem>
-                          <SelectItem value="in_app_dashboard">In-App Dashboard</SelectItem>
+                          <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                          <SelectItem value="Email">Email</SelectItem>
+                          <SelectItem value="Phone Call">Phone Call</SelectItem>
+                          <SelectItem value="In-App Dashboard">In-App Dashboard</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
-                      <Label>Venue Rules or Restrictions Clients Must Know</Label>
+                      <Label>Any Venue Rules or Restrictions Clients Must Know?</Label>
                       <Textarea
-                        value={formData.venueRules}
-                        onChange={(e) => handleInputChange('venueRules', e.target.value)}
-                        placeholder="Music cutoff time, decor limitations, usage rules, etc."
+                        value={venueRules}
+                        onChange={(e) => setVenueRules(e.target.value)}
+                        placeholder="e.g., music cutoff time, decor limitations, usage rules, etc."
                         rows={3}
                       />
                     </div>
@@ -1606,27 +1440,23 @@ const VenueOnboardingForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
                 onClick={prevStep}
                 disabled={currentStep === 1}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
                 Previous
               </Button>
               
               <div className="flex space-x-2">
                 {currentStep < totalSteps ? (
                   <Button onClick={nextStep}>
-                    Next <ArrowRight className="w-4 h-4 ml-2" />
+                    Next
                   </Button>
                 ) : (
                   <Button onClick={handleSubmit} disabled={isLoading}>
                     {isLoading ? (
                       <>
-                        <CheckCircle className="w-4 h-4 mr-2 animate-spin" />
-                        Completing Onboarding...
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
                       </>
                     ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Complete Onboarding
-                      </>
+                      'Complete Venue Onboarding'
                     )}
                   </Button>
                 )}
