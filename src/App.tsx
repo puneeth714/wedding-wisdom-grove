@@ -37,7 +37,7 @@ import StaffSettings from './pages/StaffSettings';
 function App() {
   const { user, vendorProfile } = useAuth();
   
-  // Check if vendor needs to complete onboarding (but allow them to skip)
+  // Check if vendor needs to complete onboarding for first-time users
   const needsOnboarding = user && 
     (!vendorProfile || 
      !vendorProfile.vendor_name || 
@@ -80,10 +80,14 @@ function App() {
           } 
         />
         
-        {/* Protected routes - no forced redirection to onboarding */}
+        {/* Protected routes with onboarding redirect for first-time vendors */}
         <Route path="/" element={
           <ProtectedRoute>
-            <MainLayout />
+            {needsOnboarding ? (
+              <Navigate to="/onboarding" replace />
+            ) : (
+              <MainLayout />
+            )}
           </ProtectedRoute>
         }>
           <Route index element={<Dashboard />} />

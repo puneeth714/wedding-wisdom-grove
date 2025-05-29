@@ -208,13 +208,16 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
     const updatedHalls = [...halls];
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      updatedHalls[index] = {
-        ...updatedHalls[index],
-        [parent]: {
-          ...updatedHalls[index][parent as keyof HallDetails],
-          [child]: value
-        }
-      };
+      const parentObj = updatedHalls[index][parent as keyof HallDetails];
+      if (typeof parentObj === 'object' && parentObj !== null) {
+        updatedHalls[index] = {
+          ...updatedHalls[index],
+          [parent]: {
+            ...parentObj,
+            [child]: value
+          }
+        };
+      }
     } else {
       updatedHalls[index] = {
         ...updatedHalls[index],
@@ -264,7 +267,6 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
 
     setIsLoading(true);
     try {
-      // Convert complex objects to JSON-compatible format
       const venueData = {
         vendor_name: venueName,
         vendor_category: 'Venue',
@@ -275,43 +277,19 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
         supabase_auth_uid: user.id,
         address: {
           full_address: fullAddress,
-          city: '', // Extract from address if needed
-          state: '', // Extract from address if needed
+          city: '',
+          state: '',
           country: 'India'
-        } as any,
+        },
         pricing_range: {
           min: vegPriceMin ? parseFloat(vegPriceMin) : 0,
           max: vegPriceMax ? parseFloat(vegPriceMax) : 0,
           currency: 'INR'
-        } as any,
+        },
         details: {
           contact_person: contactPerson,
           years_in_operation: yearsInOperation,
-          halls: halls.map(hall => ({
-            name: hall.name,
-            type: hall.type,
-            custom_type: hall.custom_type || null,
-            seating_capacity: {
-              theatre_style: hall.seating_capacity.theatre_style,
-              round_table: hall.seating_capacity.round_table,
-              floating_crowd: hall.seating_capacity.floating_crowd
-            },
-            dining: {
-              separate_dining_hall: hall.dining.separate_dining_hall,
-              dining_capacity: hall.dining.dining_capacity
-            },
-            area_sqft: hall.area_sqft,
-            air_conditioning: hall.air_conditioning,
-            stage: {
-              available: hall.stage.available,
-              dimensions: hall.stage.dimensions || null
-            },
-            dance_floor: {
-              available: hall.dance_floor.available,
-              size_sqft: hall.dance_floor.size_sqft || null
-            },
-            ambience_description: hall.ambience_description
-          })),
+          halls: halls,
           rental_policy: {
             rental_included_in_catering: rentalIncludedInCatering,
             weekday_rate: weekdayRate,
@@ -414,14 +392,14 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
             preferred_lead_mode: preferredLeadMode,
             venue_rules: venueRules
           }
-        } as any
+        }
       };
 
       console.log("Submitting venue data:", venueData);
 
       const { error } = await supabase
         .from('vendors')
-        .insert([venueData]);
+        .insert([venueData as any]);
 
       if (error) {
         console.error("Insert error:", error);
@@ -452,6 +430,10 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
     } else {
       setter([...array, value]);
     }
+  };
+
+  const handleBooleanChange = (checked: boolean | "indeterminate", setter: (value: boolean) => void) => {
+    setter(checked === true);
   };
 
   return (
@@ -683,7 +665,7 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
                           <Checkbox
                             id={`dining-${index}`}
                             checked={hall.dining.separate_dining_hall}
-                            onCheckedChange={(checked) => updateHall(index, 'dining.separate_dining_hall', checked)}
+                            onCheckedChange={(checked) => handleBooleanChange(checked, (value) => updateHall(index, 'dining.separate_dining_hall', value))}
                           />
                           <Label htmlFor={`dining-${index}`}>Separate Dining Hall</Label>
                         </div>
@@ -731,7 +713,7 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
                           <Checkbox
                             id={`stage-${index}`}
                             checked={hall.stage.available}
-                            onCheckedChange={(checked) => updateHall(index, 'stage.available', checked)}
+                            onCheckedChange={(checked) => handleBooleanChange(checked, (value) => updateHall(index, 'stage.available', value))}
                           />
                           <Label htmlFor={`stage-${index}`}>Stage Available</Label>
                         </div>
@@ -752,7 +734,7 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
                           <Checkbox
                             id={`dance-${index}`}
                             checked={hall.dance_floor.available}
-                            onCheckedChange={(checked) => updateHall(index, 'dance_floor.available', checked)}
+                            onCheckedChange={(checked) => handleBooleanChange(checked, (value) => updateHall(index, 'dance_floor.available', value))}
                           />
                           <Label htmlFor={`dance-${index}`}>Dance Floor Available</Label>
                         </div>
@@ -797,7 +779,7 @@ const VenueOnboardingForm: React.FC<VenueOnboardingFormProps> = ({ onComplete })
                       <Checkbox
                         id="rentalIncluded"
                         checked={rentalIncludedInCatering}
-                        onCheckedChange={setRentalIncludedInCatering}
+                        onCheckedChange={(checked) => handleBooleanChange(checked, setRentalIncludedInCatering)}
                       />
                       <Label htmlFor="rentalIncluded">Is Rental Included in Catering Charges?</Label>
                     </div>
