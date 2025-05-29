@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2, User, MapPin, DollarSign, Star, Settings } from "lucide-react";
-import { useAuth, VendorProfile as VendorProfileType } from '@/hooks/useAuthContext';
+import { useAuth } from '@/hooks/useAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -73,13 +74,39 @@ const VendorProfile: React.FC = () => {
       
       // Details
       if (vendorProfile.details) {
-        setAmenities(vendorProfile.details.amenities?.join(', ') || '');
-        setServices(vendorProfile.details.services?.join(', ') || '');
+        // Handle different data structures - arrays or strings
+        if (Array.isArray(vendorProfile.details.amenities)) {
+          setAmenities(vendorProfile.details.amenities.join(', '));
+        } else if (typeof vendorProfile.details.amenities === 'string') {
+          setAmenities(vendorProfile.details.amenities);
+        }
+        
+        if (Array.isArray(vendorProfile.details.services)) {
+          setServices(vendorProfile.details.services.join(', '));
+        } else if (typeof vendorProfile.details.services === 'string') {
+          setServices(vendorProfile.details.services);
+        }
+        
         setCapacity(vendorProfile.details.capacity || 0);
         setStyle(vendorProfile.details.style || '');
-        setSpecializations(vendorProfile.details.specializations?.join(', ') || '');
-        setPolicies(vendorProfile.details.policies?.join(', ') || '');
-        setRitualOfferings(vendorProfile.details.ritual_offerings?.join(', ') || '');
+        
+        if (Array.isArray(vendorProfile.details.specializations)) {
+          setSpecializations(vendorProfile.details.specializations.join(', '));
+        } else if (typeof vendorProfile.details.specializations === 'string') {
+          setSpecializations(vendorProfile.details.specializations);
+        }
+        
+        if (Array.isArray(vendorProfile.details.policies)) {
+          setPolicies(vendorProfile.details.policies.join(', '));
+        } else if (typeof vendorProfile.details.policies === 'string') {
+          setPolicies(vendorProfile.details.policies);
+        }
+        
+        if (Array.isArray(vendorProfile.details.ritual_offerings)) {
+          setRitualOfferings(vendorProfile.details.ritual_offerings.join(', '));
+        } else if (typeof vendorProfile.details.ritual_offerings === 'string') {
+          setRitualOfferings(vendorProfile.details.ritual_offerings);
+        }
       }
     }
   }, [vendorProfile]);
@@ -452,3 +479,4 @@ const VendorProfile: React.FC = () => {
 };
 
 export default VendorProfile;
+

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2, CheckCircle, X, ArrowRight } from 'lucide-react';
+import VenueOnboardingForm from '@/components/onboarding/VenueOnboardingForm';
 
 const categories = [
   "Venue", "Catering", "Photography", "Videography", "Decor", 
@@ -34,6 +36,7 @@ const VendorOnboarding: React.FC = () => {
   // Check if we're updating existing vendor
   const [isUpdating, setIsUpdating] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [showVenueForm, setShowVenueForm] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -252,8 +255,21 @@ const VendorOnboarding: React.FC = () => {
     });
   };
 
+  const handleVenueOnboardingComplete = () => {
+    navigate('/');
+  };
+
+  const handleShowVenueForm = () => {
+    setShowVenueForm(true);
+  };
+
   if (!user) {
     return <div>Loading...</div>;
+  }
+
+  // Show comprehensive venue form for first-time users or when specifically requested
+  if (showVenueForm || (!vendorProfile && !isUpdating)) {
+    return <VenueOnboardingForm onComplete={handleVenueOnboardingComplete} />;
   }
 
   return (
@@ -271,7 +287,10 @@ const VendorOnboarding: React.FC = () => {
           </p>
           
           {!isUpdating && (
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-center gap-4 mt-4">
+              <Button onClick={handleShowVenueForm} className="bg-blue-600 hover:bg-blue-700">
+                Venue Onboarding (Recommended)
+              </Button>
               <Button variant="outline" onClick={handleSkip}>
                 Skip for now
               </Button>
@@ -622,3 +641,4 @@ const VendorOnboarding: React.FC = () => {
 };
 
 export default VendorOnboarding;
+
