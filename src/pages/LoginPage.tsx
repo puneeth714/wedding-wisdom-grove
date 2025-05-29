@@ -20,22 +20,15 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+// Simplified signup schema - just basic info for auth
 const signupSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  vendorName: z.string().min(2, 'Business name must be at least 2 characters'),
-  vendorCategory: z.string().min(1, 'Please select a category'),
   displayName: z.string().min(2, 'Your name must be at least 2 characters'),
-  phone: z.string().optional(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
-
-const categories = [
-  "Venue", "Catering", "Photography", "Videography", "Decor", 
-  "Makeup", "Clothing", "Music", "Transportation", "Invitation", "Other"
-];
 
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -63,10 +56,7 @@ const LoginPage: React.FC = () => {
     defaultValues: {
       email: '',
       password: '',
-      vendorName: '',
-      vendorCategory: '',
       displayName: '',
-      phone: '',
     }
   });
   
@@ -76,12 +66,9 @@ const LoginPage: React.FC = () => {
   
   const onSignup = async (data: SignupFormValues) => {
     try {
-      const userType = activeTab === 'signup' ? 'vendor' : 'vendor_staff';
+      const userType = 'vendor';
       await signUp(data.email, data.password, {
-        vendor_name: data.vendorName,
-        vendor_category: data.vendorCategory,
         display_name: data.displayName,
-        phone_number: data.phone || null
       }, userType);
       setSignupSuccess(true);
 
@@ -274,46 +261,6 @@ const LoginPage: React.FC = () => {
                   
                   <FormField
                     control={signupForm.control}
-                    name="vendorName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Name</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Your Business Name" 
-                            className="sanskara-input"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={signupForm.control}
-                    name="vendorCategory"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Category</FormLabel>
-                        <FormControl>
-                          <select 
-                            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                            {...field}
-                          >
-                            <option value="">Select a category</option>
-                            {categories.map(category => (
-                              <option key={category} value={category}>{category}</option>
-                            ))}
-                          </select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={signupForm.control}
                     name="displayName"
                     render={({ field }) => (
                       <FormItem>
@@ -321,24 +268,6 @@ const LoginPage: React.FC = () => {
                         <FormControl>
                           <Input 
                             placeholder="Your Name" 
-                            className="sanskara-input"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={signupForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number (Optional)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="+91 98765 43210" 
                             className="sanskara-input"
                             {...field}
                           />

@@ -37,7 +37,7 @@ import StaffSettings from './pages/StaffSettings';
 function App() {
   const { user, vendorProfile } = useAuth();
   
-  // Check if vendor needs to complete onboarding
+  // Check if vendor needs to complete onboarding (but allow them to skip)
   const needsOnboarding = user && 
     (!vendorProfile || 
      !vendorProfile.vendor_name || 
@@ -68,28 +68,22 @@ function App() {
           <Route path="/staff/settings" element={<StaffSettings />} />
         </Route>
         
-        {/* Vendor onboarding route */}
+        {/* Vendor onboarding route - accessible to authenticated users */}
         <Route 
           path="/onboarding" 
           element={
             user ? (
-              needsOnboarding ? 
-                <VendorOnboarding /> : 
-                <Navigate to="/" replace />
+              <VendorOnboarding />
             ) : (
               <Navigate to="/login" replace />
             )
           } 
         />
         
-        {/* Protected routes */}
+        {/* Protected routes - no forced redirection to onboarding */}
         <Route path="/" element={
           <ProtectedRoute>
-            {needsOnboarding ? (
-              <Navigate to="/onboarding" replace />
-            ) : (
-              <MainLayout />
-            )}
+            <MainLayout />
           </ProtectedRoute>
         }>
           <Route index element={<Dashboard />} />
