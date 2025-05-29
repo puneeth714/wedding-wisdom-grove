@@ -11,32 +11,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 
-interface ExtendedVendorProfile extends Omit<VendorProfileType, 'pricing_range'> {
-  details?: {
-    amenities?: string[];
-    services?: string[];
-    capacity?: number;
-    style?: string;
-    specializations?: string[];
-  };
-  address?: {
-    city: string;
-    state: string;
-    country: string;
-    full_address: string;
-  };
-  pricing_range?: {
-    min: number;
-    max: number;
-    currency: string;
-  };
-}
-
 const VendorProfile: React.FC = () => {
   const { vendorProfile, refreshVendorProfile } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [profileData, setProfileData] = useState<ExtendedVendorProfile | null>(null);
 
   // Form states
   const [vendorName, setVendorName] = useState('');
@@ -63,42 +41,45 @@ const VendorProfile: React.FC = () => {
   const [capacity, setCapacity] = useState<number>(0);
   const [style, setStyle] = useState('');
   const [specializations, setSpecializations] = useState<string>('');
+  const [policies, setPolicies] = useState<string>('');
+  const [ritualOfferings, setRitualOfferings] = useState<string>('');
 
   useEffect(() => {
     if (vendorProfile) {
-      const extended = vendorProfile as unknown as ExtendedVendorProfile;
-      setProfileData(extended);
+      console.log("Loading vendor profile data:", vendorProfile);
       
       // Basic info
-      setVendorName(extended.vendor_name || '');
-      setContactEmail(extended.contact_email || '');
-      setPhoneNumber(extended.phone_number || '');
-      setWebsiteUrl(extended.website_url || '');
-      setDescription(extended.description || '');
-      setVendorCategory(extended.vendor_category || '');
+      setVendorName(vendorProfile.vendor_name || '');
+      setContactEmail(vendorProfile.contact_email || '');
+      setPhoneNumber(vendorProfile.phone_number || '');
+      setWebsiteUrl(vendorProfile.website_url || '');
+      setDescription(vendorProfile.description || '');
+      setVendorCategory(vendorProfile.vendor_category || '');
       
       // Address
-      if (extended.address) {
-        setCity(extended.address.city || '');
-        setState(extended.address.state || '');
-        setCountry(extended.address.country || '');
-        setFullAddress(extended.address.full_address || '');
+      if (vendorProfile.address) {
+        setCity(vendorProfile.address.city || '');
+        setState(vendorProfile.address.state || '');
+        setCountry(vendorProfile.address.country || '');
+        setFullAddress(vendorProfile.address.full_address || '');
       }
       
       // Pricing
-      if (extended.pricing_range) {
-        setMinPrice(Number(extended.pricing_range.min) || 0);
-        setMaxPrice(Number(extended.pricing_range.max) || 0);
-        setCurrency(extended.pricing_range.currency || 'INR');
+      if (vendorProfile.pricing_range) {
+        setMinPrice(Number(vendorProfile.pricing_range.min) || 0);
+        setMaxPrice(Number(vendorProfile.pricing_range.max) || 0);
+        setCurrency(vendorProfile.pricing_range.currency || 'INR');
       }
       
       // Details
-      if (extended.details) {
-        setAmenities(extended.details.amenities?.join(', ') || '');
-        setServices(extended.details.services?.join(', ') || '');
-        setCapacity(extended.details.capacity || 0);
-        setStyle(extended.details.style || '');
-        setSpecializations(extended.details.specializations?.join(', ') || '');
+      if (vendorProfile.details) {
+        setAmenities(vendorProfile.details.amenities?.join(', ') || '');
+        setServices(vendorProfile.details.services?.join(', ') || '');
+        setCapacity(vendorProfile.details.capacity || 0);
+        setStyle(vendorProfile.details.style || '');
+        setSpecializations(vendorProfile.details.specializations?.join(', ') || '');
+        setPolicies(vendorProfile.details.policies?.join(', ') || '');
+        setRitualOfferings(vendorProfile.details.ritual_offerings?.join(', ') || '');
       }
     }
   }, [vendorProfile]);
@@ -108,6 +89,8 @@ const VendorProfile: React.FC = () => {
 
     setIsLoading(true);
     try {
+      console.log("Saving vendor profile...");
+      
       const updateData = {
         vendor_name: vendorName,
         contact_email: contactEmail,
@@ -127,27 +110,36 @@ const VendorProfile: React.FC = () => {
           currency
         },
         details: {
-          amenities: amenities ? amenities.split(',').map(item => item.trim()) : [],
-          services: services ? services.split(',').map(item => item.trim()) : [],
-          capacity,
-          style,
-          specializations: specializations ? specializations.split(',').map(item => item.trim()) : []
+          amenities: amenities ? amenities.split(',').map(item => item.trim()).filter(Boolean) : [],
+          services: services ? services.split(',').map(item => item.trim()).filter(Boolean) : [],
+          capacity: capacity || null,
+          style: style || null,
+          specializations: specializations ? specializations.split(',').map(item => item.trim()).filter(Boolean) : [],
+          policies: policies ? policies.split(',').map(item => item.trim()).filter(Boolean) : [],
+          ritual_offerings: ritualOfferings ? ritualOfferings.split(',').map(item => item.trim()).filter(Boolean) : []
         }
       };
+
+      console.log("Update data:", updateData);
 
       const { error } = await supabase
         .from('vendors')
         .update(updateData)
         .eq('vendor_id', vendorProfile.vendor_id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Update error:", error);
+        throw error;
+      }
 
+      console.log("Profile updated successfully");
       await refreshVendorProfile();
       toast({
         title: "Profile updated",
         description: "Your vendor profile has been updated successfully.",
       });
     } catch (error: any) {
+      console.error("Error updating profile:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update profile",
@@ -416,6 +408,28 @@ const VendorProfile: React.FC = () => {
               value={specializations}
               onChange={(e) => setSpecializations(e.target.value)}
               placeholder="Weddings, Corporate Events, etc."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="policies">Policies (comma separated)</Label>
+            <Textarea 
+              id="policies" 
+              rows={3}
+              value={policies}
+              onChange={(e) => setPolicies(e.target.value)}
+              placeholder="Cancellation policy, Payment terms, etc."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ritual_offerings">Ritual/AI Offerings (comma separated)</Label>
+            <Textarea 
+              id="ritual_offerings" 
+              rows={3}
+              value={ritualOfferings}
+              onChange={(e) => setRitualOfferings(e.target.value)}
+              placeholder="Traditional ceremonies, AI-powered services, etc."
             />
           </div>
         </CardContent>

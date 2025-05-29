@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,6 +57,8 @@ const VendorOnboarding: React.FC = () => {
     capacity: '',
     style: '',
     specializations: '',
+    policies: '',
+    ritualOfferings: '',
   });
 
   useEffect(() => {
@@ -69,6 +70,8 @@ const VendorOnboarding: React.FC = () => {
     // If vendor profile exists, populate the form with existing data
     if (vendorProfile) {
       setIsUpdating(true);
+      
+      console.log("Populating form with existing vendor data:", vendorProfile);
       
       // Basic info
       setFormData(prev => ({
@@ -83,37 +86,36 @@ const VendorOnboarding: React.FC = () => {
 
       // Parse address data
       if (vendorProfile.address) {
-        const address = vendorProfile.address as any;
         setFormData(prev => ({
           ...prev,
-          city: address.city || '',
-          state: address.state || '',
-          country: address.country || 'India',
-          fullAddress: address.full_address || '',
+          city: vendorProfile.address?.city || '',
+          state: vendorProfile.address?.state || '',
+          country: vendorProfile.address?.country || 'India',
+          fullAddress: vendorProfile.address?.full_address || '',
         }));
       }
 
       // Parse pricing data
       if (vendorProfile.pricing_range) {
-        const pricing = vendorProfile.pricing_range as any;
         setFormData(prev => ({
           ...prev,
-          minPrice: pricing.min?.toString() || '',
-          maxPrice: pricing.max?.toString() || '',
-          currency: pricing.currency || 'INR',
+          minPrice: vendorProfile.pricing_range?.min?.toString() || '',
+          maxPrice: vendorProfile.pricing_range?.max?.toString() || '',
+          currency: vendorProfile.pricing_range?.currency || 'INR',
         }));
       }
 
       // Parse details data
       if (vendorProfile.details) {
-        const details = vendorProfile.details as any;
         setFormData(prev => ({
           ...prev,
-          selectedAmenities: details.amenities || [],
-          services: details.services?.join(', ') || '',
-          capacity: details.capacity?.toString() || '',
-          style: details.style || '',
-          specializations: details.specializations?.join(', ') || '',
+          selectedAmenities: vendorProfile.details?.amenities || [],
+          services: vendorProfile.details?.services?.join(', ') || '',
+          capacity: vendorProfile.details?.capacity?.toString() || '',
+          style: vendorProfile.details?.style || '',
+          specializations: vendorProfile.details?.specializations?.join(', ') || '',
+          policies: vendorProfile.details?.policies?.join(', ') || '',
+          ritualOfferings: vendorProfile.details?.ritual_offerings?.join(', ') || '',
         }));
       }
     }
@@ -194,12 +196,16 @@ const VendorOnboarding: React.FC = () => {
         },
         details: {
           amenities: amenitiesList,
-          services: formData.services ? formData.services.split(',').map(s => s.trim()) : [],
+          services: formData.services ? formData.services.split(',').map(s => s.trim()).filter(Boolean) : [],
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
-          style: formData.style,
-          specializations: formData.specializations ? formData.specializations.split(',').map(s => s.trim()) : [],
+          style: formData.style || null,
+          specializations: formData.specializations ? formData.specializations.split(',').map(s => s.trim()).filter(Boolean) : [],
+          policies: formData.policies ? formData.policies.split(',').map(s => s.trim()).filter(Boolean) : [],
+          ritual_offerings: formData.ritualOfferings ? formData.ritualOfferings.split(',').map(s => s.trim()).filter(Boolean) : []
         },
       };
+
+      console.log("Submitting vendor data:", vendorData);
 
       if (isUpdating && vendorProfile) {
         // Update existing vendor
@@ -208,7 +214,10 @@ const VendorOnboarding: React.FC = () => {
           .update(vendorData)
           .eq('vendor_id', vendorProfile.vendor_id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Update error:", error);
+          throw error;
+        }
 
         toast({
           title: "Profile updated successfully!",
@@ -220,7 +229,10 @@ const VendorOnboarding: React.FC = () => {
           .from('vendors')
           .insert([vendorData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error:", error);
+          throw error;
+        }
 
         toast({
           title: "Onboarding completed successfully!",
@@ -555,6 +567,28 @@ const VendorOnboarding: React.FC = () => {
                           placeholder="Weddings, Corporate Events"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="policies">Policies (comma separated)</Label>
+                      <Textarea
+                        id="policies"
+                        value={formData.policies}
+                        onChange={(e) => handleInputChange('policies', e.target.value)}
+                        placeholder="Cancellation policy, Payment terms, etc."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="ritualOfferings">Ritual/AI Offerings (comma separated)</Label>
+                      <Textarea
+                        id="ritualOfferings"
+                        value={formData.ritualOfferings}
+                        onChange={(e) => handleInputChange('ritualOfferings', e.target.value)}
+                        placeholder="Traditional ceremonies, AI-powered services, etc."
+                        rows={3}
+                      />
                     </div>
                   </div>
                 </div>
