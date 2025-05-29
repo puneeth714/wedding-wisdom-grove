@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ const VendorOnboarding: React.FC = () => {
 
   // Check if we're updating existing vendor
   const [isUpdating, setIsUpdating] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -61,14 +63,15 @@ const VendorOnboarding: React.FC = () => {
     ritualOfferings: '',
   });
 
+  // Fix race condition by using useEffect with proper dependency management
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
 
-    // If vendor profile exists, populate the form with existing data
-    if (vendorProfile) {
+    // Only populate form data once when vendorProfile is available and data hasn't been loaded yet
+    if (vendorProfile && !dataLoaded) {
       setIsUpdating(true);
       
       console.log("Populating form with existing vendor data:", vendorProfile);
@@ -82,44 +85,31 @@ const VendorOnboarding: React.FC = () => {
         contactEmail: vendorProfile.contact_email || '',
         phoneNumber: vendorProfile.phone_number || '',
         websiteUrl: vendorProfile.website_url || '',
+        // Parse address data safely
+        city: vendorProfile.address?.city || '',
+        state: vendorProfile.address?.state || '',
+        country: vendorProfile.address?.country || 'India',
+        fullAddress: vendorProfile.address?.full_address || '',
+        // Parse pricing data safely
+        minPrice: vendorProfile.pricing_range?.min?.toString() || '',
+        maxPrice: vendorProfile.pricing_range?.max?.toString() || '',
+        currency: vendorProfile.pricing_range?.currency || 'INR',
+        // Parse details data safely
+        selectedAmenities: vendorProfile.details?.amenities || [],
+        services: vendorProfile.details?.services?.join(', ') || '',
+        capacity: vendorProfile.details?.capacity?.toString() || '',
+        style: vendorProfile.details?.style || '',
+        specializations: vendorProfile.details?.specializations?.join(', ') || '',
+        policies: vendorProfile.details?.policies?.join(', ') || '',
+        ritualOfferings: vendorProfile.details?.ritual_offerings?.join(', ') || '',
       }));
-
-      // Parse address data
-      if (vendorProfile.address) {
-        setFormData(prev => ({
-          ...prev,
-          city: vendorProfile.address?.city || '',
-          state: vendorProfile.address?.state || '',
-          country: vendorProfile.address?.country || 'India',
-          fullAddress: vendorProfile.address?.full_address || '',
-        }));
-      }
-
-      // Parse pricing data
-      if (vendorProfile.pricing_range) {
-        setFormData(prev => ({
-          ...prev,
-          minPrice: vendorProfile.pricing_range?.min?.toString() || '',
-          maxPrice: vendorProfile.pricing_range?.max?.toString() || '',
-          currency: vendorProfile.pricing_range?.currency || 'INR',
-        }));
-      }
-
-      // Parse details data
-      if (vendorProfile.details) {
-        setFormData(prev => ({
-          ...prev,
-          selectedAmenities: vendorProfile.details?.amenities || [],
-          services: vendorProfile.details?.services?.join(', ') || '',
-          capacity: vendorProfile.details?.capacity?.toString() || '',
-          style: vendorProfile.details?.style || '',
-          specializations: vendorProfile.details?.specializations?.join(', ') || '',
-          policies: vendorProfile.details?.policies?.join(', ') || '',
-          ritualOfferings: vendorProfile.details?.ritual_offerings?.join(', ') || '',
-        }));
-      }
+      
+      setDataLoaded(true);
+    } else if (!vendorProfile && !dataLoaded) {
+      // No existing vendor profile, mark as loaded to prevent further checks
+      setDataLoaded(true);
     }
-  }, [user, vendorProfile, navigate]);
+  }, [user, vendorProfile, navigate, dataLoaded]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
