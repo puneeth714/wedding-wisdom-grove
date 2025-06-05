@@ -23,8 +23,6 @@ import EditService from "./pages/EditService";
 import StaffDashboard from "./pages/StaffDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StaffProtectedRoute from "./components/StaffProtectedRoute";
-import VendorLayout from "./components/VendorLayout";
-import StaffDashboardLayout from "./components/staff/StaffDashboardLayout";
 import Navbar from "./components/Navbar";
 
 const queryClient = new QueryClient();
@@ -72,91 +70,67 @@ const App = () => (
                 </>
               } />
               
-              {/* Vendor Routes - with VendorLayout */}
+              {/* Vendor Routes - these will be handled by VendorLayout internally */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <Dashboard />
-                  </VendorLayout>
+                  <Dashboard />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <VendorProfile />
-                  </VendorLayout>
+                  <VendorProfile />
                 </ProtectedRoute>
               } />
               <Route path="/profile/edit" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <EditProfile />
-                  </VendorLayout>
+                  <EditProfile />
                 </ProtectedRoute>
               } />
               <Route path="/services" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <Services />
-                  </VendorLayout>
+                  <Services />
                 </ProtectedRoute>
               } />
               <Route path="/services/add" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <AddService />
-                  </VendorLayout>
+                  <AddService />
                 </ProtectedRoute>
               } />
               <Route path="/services/edit/:serviceId" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <EditService />
-                  </VendorLayout>
+                  <EditService />
                 </ProtectedRoute>
               } />
               <Route path="/staff" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <Staff />
-                  </VendorLayout>
+                  <Staff />
                 </ProtectedRoute>
               } />
               <Route path="/settings" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <Settings />
-                  </VendorLayout>
+                  <Settings />
                 </ProtectedRoute>
               } />
               <Route path="/bookings" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <Bookings />
-                  </VendorLayout>
+                  <Bookings />
                 </ProtectedRoute>
               } />
               <Route path="/onboarding" element={
                 <ProtectedRoute>
-                  <VendorLayout>
-                    <VendorOnboarding />
-                  </VendorLayout>
+                  <VendorOnboarding />
                 </ProtectedRoute>
               } />
               
-              {/* Staff Routes - with StaffDashboardLayout */}
+              {/* Staff Routes - these will be handled by StaffDashboardLayout internally */}
               <Route path="/staff/dashboard" element={
                 <StaffProtectedRoute>
-                  <StaffDashboardLayout>
-                    <StaffDashboard />
-                  </StaffDashboardLayout>
+                  <StaffDashboard />
                 </StaffProtectedRoute>
               } />
               <Route path="/staff/services" element={
                 <StaffProtectedRoute>
-                  <StaffDashboardLayout>
-                    <StaffServices />
-                  </StaffDashboardLayout>
+                  <StaffServices />
                 </StaffProtectedRoute>
               } />
             </Routes>
