@@ -21,9 +21,7 @@ import VendorOnboarding from "./pages/VendorOnboarding";
 import AddService from "./pages/AddService";
 import EditService from "./pages/EditService";
 import StaffDashboard from "./pages/StaffDashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
-import StaffProtectedRoute from "./components/StaffProtectedRoute";
-import Navbar from "./components/Navbar";
+import VendorLayout from "./components/VendorLayout";
 
 const queryClient = new QueryClient();
 
@@ -36,103 +34,67 @@ const App = () => (
         <AuthProvider>
           <div className="min-h-screen bg-background">
             <Routes>
-              {/* Public Routes - with Navbar */}
-              <Route path="/" element={
-                <>
-                  <Navbar />
-                  <main className="container mx-auto px-4 py-8">
-                    <Index />
-                  </main>
-                </>
-              } />
-              <Route path="/login" element={
-                <>
-                  <Navbar />
-                  <main className="container mx-auto px-4 py-8">
-                    <LoginPage />
-                  </main>
-                </>
-              } />
-              <Route path="/signup" element={
-                <>
-                  <Navbar />
-                  <main className="container mx-auto px-4 py-8">
-                    <RegisterPage />
-                  </main>
-                </>
-              } />
-              <Route path="/staff/login" element={
-                <>
-                  <Navbar />
-                  <main className="container mx-auto px-4 py-8">
-                    <StaffLoginPage />
-                  </main>
-                </>
-              } />
+              {/* Authentication Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<RegisterPage />} />
+              <Route path="/staff/login" element={<StaffLoginPage />} />
               
-              {/* Vendor Routes - these will be handled by VendorLayout internally */}
+              {/* Vendor Routes - wrapped with VendorLayout */}
               <Route path="/dashboard" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <Dashboard />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/profile" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <VendorProfile />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/profile/edit" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <EditProfile />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/services" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <Services />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/services/add" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <AddService />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/services/edit/:serviceId" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <EditService />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/staff" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <Staff />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/settings" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <Settings />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/bookings" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <Bookings />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               <Route path="/onboarding" element={
-                <ProtectedRoute>
+                <VendorLayout>
                   <VendorOnboarding />
-                </ProtectedRoute>
+                </VendorLayout>
               } />
               
-              {/* Staff Routes - these will be handled by StaffDashboardLayout internally */}
-              <Route path="/staff/dashboard" element={
-                <StaffProtectedRoute>
-                  <StaffDashboard />
-                </StaffProtectedRoute>
-              } />
-              <Route path="/staff/services" element={
-                <StaffProtectedRoute>
-                  <StaffServices />
-                </StaffProtectedRoute>
-              } />
+              {/* Staff Routes */}
+              <Route path="/staff/dashboard" element={<StaffDashboard />} />
+              <Route path="/staff/services" element={<StaffServices />} />
             </Routes>
           </div>
         </AuthProvider>
