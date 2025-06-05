@@ -1,40 +1,52 @@
 
 import React from 'react';
 import { useAuth } from '../hooks/useAuthContext';
+import { supabase } from '../integrations/supabase/client';
 import { useLocation, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, vendorProfile, staffProfile, isLoading, isLoadingProfile } = useAuth();
+  const { user, vendorProfile } = useAuth();
   const location = useLocation();
+  const [showPopup, setShowPopup] = useState(false);
+  const [redirect, setRedirect] = useState(false);
 
-  // Show loading while checking authentication
-  if (isLoading || isLoadingProfile) {
+  useEffect(() => {
+    const checkStaff = async () => {
+      if (user) {
+        // Check if user is a staff (not owner)
+        const { data: staffData } = await supabase
+          .from('vendor_staff')
+          .select('role')
+          .eq('supabase_auth_uid', user.id)
+          .single();
+        if (staffData && staffData.role && staffData.role !== 'owner') {
+          await supabase.auth.signOut();
+          setShowPopup(true);
+          setTimeout(() => setRedirect(true), 2000);
+        }
+      }
+    };
+    checkStaff();
+  }, [user]);
+
+  if (showPopup) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2">Verifying access...</p>
+      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="bg-white p-6 rounded shadow text-center">
+          <p className="mb-4 text-lg font-semibold">Access Restricted</p>
+          <p className="mb-2">Staff members cannot access vendor portal. Please log in as a vendor.</p>
+          <p>Redirecting to vendor login...</p>
         </div>
       </div>
     );
   }
-
-  // If no user, redirect to login
+  if (redirect) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  // If user is staff, redirect to staff portal
-  if (staffProfile) {
-    return <Navigate to="/staff/dashboard" replace />;
-  }
-
-  // If user doesn't have vendor profile, redirect to onboarding
-  if (!vendorProfile) {
-    return <Navigate to="/onboarding" state={{ from: location }} replace />;
-  }
-
-  // User is a vendor with valid profile
   return <>{children}</>;
 };
 

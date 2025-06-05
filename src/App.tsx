@@ -1,145 +1,113 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import Dashboard from './pages/Dashboard';
+import Bookings from './pages/Bookings';
+import Calendar from './pages/Calendar';
+import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile';
+import Settings from './pages/Settings';
+import Services from './pages/Services';
+import AddService from './pages/AddService';
+import EditService from './pages/EditService';
+import Staff from './pages/Staff';
+import Tasks from './pages/Tasks';
+import NotFound from './pages/NotFound';
+import MainLayout from './layouts/MainLayout';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './hooks/useAuthContext';
+import { DataCacheProvider } from './hooks/useDataCache';
+import Reviews from './pages/Reviews';
+import Payments from './pages/Payments';
+import Notifications from './pages/Notifications';
+import VendorOnboarding from './pages/VendorOnboarding';
+import StaffLoginPage from './pages/StaffLoginPage';
+import StaffDashboard from './pages/StaffDashboard';
+import StaffProtectedRoute from './components/StaffProtectedRoute';
+import StaffOnboarding from './pages/StaffOnboarding';
+import StaffResetPassword from './pages/StaffResetPassword';
+import StaffTasks from './pages/StaffTasks';
+import StaffBookings from './pages/StaffBookings';
+import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
+import StaffVendorServicesPage from './pages/StaffVendorServicesPage';
+import StaffNotifications from './pages/StaffNotifications';
+import StaffProfile from './pages/StaffProfile';
+import StaffSettings from './pages/StaffSettings';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuthContext";
-import Index from "./pages/Index";
-import LoginPage from "./pages/LoginPage";
-import StaffLoginPage from "./pages/StaffLoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import Dashboard from "./pages/Dashboard";
-import VendorProfile from "./pages/VendorProfile";
-import EditProfile from "./pages/EditProfile";
-import Services from "./pages/Services";
-import StaffServices from "./pages/StaffServices";
-import Staff from "./pages/Staff";
-import Settings from "./pages/Settings";
-import Bookings from "./pages/Bookings";
-import VendorOnboarding from "./pages/VendorOnboarding";
-import AddService from "./pages/AddService";
-import EditService from "./pages/EditService";
-import StaffDashboard from "./pages/StaffDashboard";
-import Calendar from "./pages/Calendar";
-import Tasks from "./pages/Tasks";
-import Notifications from "./pages/Notifications";
-import Reviews from "./pages/Reviews";
-import Payments from "./pages/Payments";
-import VendorLayout from "./components/VendorLayout";
-import StaffDashboardLayout from "./components/staff/StaffDashboardLayout";
+function App() {
+  const { user, vendorProfile, isLoading, isLoadingProfile } = useAuth();
+  const loading = isLoading || isLoadingProfile;
 
-const queryClient = new QueryClient();
+  // Onboarding logic: Only require onboarding if vendorProfile is null and onboarding has not been skipped
+  const onboardingSkipped = localStorage.getItem('onboardingSkipped') === 'false';
+  const needsOnboarding = !loading && user && !vendorProfile && !onboardingSkipped;
+  console.log('load,vendorProfile, needsOnboarding:', loading, vendorProfile, needsOnboarding); 
+  if (loading) return null;
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <div className="min-h-screen bg-background">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<RegisterPage />} />
-              <Route path="/staff/login" element={<StaffLoginPage />} />
-              
-              {/* Vendor Routes - All wrapped with VendorLayout */}
-              <Route path="/dashboard" element={
-                <VendorLayout>
-                  <Dashboard />
-                </VendorLayout>
-              } />
-              <Route path="/profile" element={
-                <VendorLayout>
-                  <VendorProfile />
-                </VendorLayout>
-              } />
-              <Route path="/profile/edit" element={
-                <VendorLayout>
-                  <EditProfile />
-                </VendorLayout>
-              } />
-              <Route path="/services" element={
-                <VendorLayout>
-                  <Services />
-                </VendorLayout>
-              } />
-              <Route path="/services/add" element={
-                <VendorLayout>
-                  <AddService />
-                </VendorLayout>
-              } />
-              <Route path="/services/edit/:serviceId" element={
-                <VendorLayout>
-                  <EditService />
-                </VendorLayout>
-              } />
-              <Route path="/calendar" element={
-                <VendorLayout>
-                  <Calendar />
-                </VendorLayout>
-              } />
-              <Route path="/bookings" element={
-                <VendorLayout>
-                  <Bookings />
-                </VendorLayout>
-              } />
-              <Route path="/tasks" element={
-                <VendorLayout>
-                  <Tasks />
-                </VendorLayout>
-              } />
-              <Route path="/staff" element={
-                <VendorLayout>
-                  <Staff />
-                </VendorLayout>
-              } />
-              <Route path="/notifications" element={
-                <VendorLayout>
-                  <Notifications />
-                </VendorLayout>
-              } />
-              <Route path="/reviews" element={
-                <VendorLayout>
-                  <Reviews />
-                </VendorLayout>
-              } />
-              <Route path="/payments" element={
-                <VendorLayout>
-                  <Payments />
-                </VendorLayout>
-              } />
-              <Route path="/settings" element={
-                <VendorLayout>
-                  <Settings />
-                </VendorLayout>
-              } />
-              <Route path="/onboarding" element={
-                <VendorLayout>
-                  <VendorOnboarding />
-                </VendorLayout>
-              } />
-              
-              {/* Staff Routes - All wrapped with StaffDashboardLayout */}
-              <Route path="/staff/dashboard" element={
-                <StaffDashboardLayout>
-                  <StaffDashboard />
-                </StaffDashboardLayout>
-              } />
-              <Route path="/staff/services" element={
-                <StaffDashboardLayout>
-                  <StaffServices />
-                </StaffDashboardLayout>
-              } />
-            </Routes>
-          </div>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <DataCacheProvider>
+      <Routes>
+        {/* Public routes */}
+        <Route 
+          path="/login" 
+          element={user ? <Navigate to="/" replace /> : <LoginPage />} 
+        />
+        <Route path="/staff/login" element={<StaffLoginPage />} />
+        {/* Protected Staff Routes */}
+        <Route element={<StaffProtectedRoute />}>
+          <Route path="/staff/dashboard" element={<StaffDashboard />} />
+          <Route path="/staff/onboarding" element={<StaffOnboarding />} />
+          <Route path="/staff/reset-password" element={<StaffResetPassword />} />
+          <Route path="/staff/tasks" element={<StaffTasks />} />
+          <Route path="/staff/bookings" element={<StaffBookings />} />
+          <Route path="/staff/availability" element={<StaffAvailabilityPage />} />
+          <Route path="/staff/services" element={<StaffVendorServicesPage />} />
+          <Route path="/staff/notifications" element={<StaffNotifications />} />
+          <Route path="/staff/profile" element={<StaffProfile />} />
+          <Route path="/staff/settings" element={<StaffSettings />} />
+        </Route>
+        {/* Vendor onboarding route */}
+        <Route 
+          path="/onboarding" 
+          element={
+            user ? (
+              needsOnboarding ? 
+                <VendorOnboarding /> : 
+                <Navigate to="/" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        {/* Protected routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            {needsOnboarding ? (
+              <Navigate to="/onboarding" replace />
+            ) : (
+              <MainLayout />
+            )}
+          </ProtectedRoute>
+        }>
+          <Route index element={<Dashboard />} />
+          <Route path="bookings" element={<Bookings />} />
+          <Route path="calendar" element={<Calendar />} />
+          <Route path="services" element={<Services />} />
+          <Route path="services/add" element={<AddService />} />
+          <Route path="services/edit/:serviceId" element={<EditService />} />
+          <Route path="staff" element={<Staff />} />
+          <Route path="tasks" element={<Tasks />} />
+          <Route path="payments" element={<Payments />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="profile/edit" element={<EditProfile />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="reviews" element={<Reviews />} />
+        </Route>
+        {/* 404 route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </DataCacheProvider>
+  );
+}
 
 export default App;
