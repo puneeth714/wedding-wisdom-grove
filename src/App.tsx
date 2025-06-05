@@ -21,7 +21,13 @@ import VendorOnboarding from "./pages/VendorOnboarding";
 import AddService from "./pages/AddService";
 import EditService from "./pages/EditService";
 import StaffDashboard from "./pages/StaffDashboard";
+import Calendar from "./pages/Calendar";
+import Tasks from "./pages/Tasks";
+import Notifications from "./pages/Notifications";
+import Reviews from "./pages/Reviews";
+import Payments from "./pages/Payments";
 import VendorLayout from "./components/VendorLayout";
+import StaffDashboardLayout from "./components/staff/StaffDashboardLayout";
 
 const queryClient = new QueryClient();
 
@@ -34,13 +40,13 @@ const App = () => (
         <AuthProvider>
           <div className="min-h-screen bg-background">
             <Routes>
-              {/* Authentication Routes */}
+              {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<RegisterPage />} />
               <Route path="/staff/login" element={<StaffLoginPage />} />
               
-              {/* Vendor Routes - wrapped with VendorLayout */}
+              {/* Vendor Routes - All wrapped with VendorLayout */}
               <Route path="/dashboard" element={
                 <VendorLayout>
                   <Dashboard />
@@ -71,19 +77,44 @@ const App = () => (
                   <EditService />
                 </VendorLayout>
               } />
-              <Route path="/staff" element={
+              <Route path="/calendar" element={
                 <VendorLayout>
-                  <Staff />
-                </VendorLayout>
-              } />
-              <Route path="/settings" element={
-                <VendorLayout>
-                  <Settings />
+                  <Calendar />
                 </VendorLayout>
               } />
               <Route path="/bookings" element={
                 <VendorLayout>
                   <Bookings />
+                </VendorLayout>
+              } />
+              <Route path="/tasks" element={
+                <VendorLayout>
+                  <Tasks />
+                </VendorLayout>
+              } />
+              <Route path="/staff" element={
+                <VendorLayout>
+                  <Staff />
+                </VendorLayout>
+              } />
+              <Route path="/notifications" element={
+                <VendorLayout>
+                  <Notifications />
+                </VendorLayout>
+              } />
+              <Route path="/reviews" element={
+                <VendorLayout>
+                  <Reviews />
+                </VendorLayout>
+              } />
+              <Route path="/payments" element={
+                <VendorLayout>
+                  <Payments />
+                </VendorLayout>
+              } />
+              <Route path="/settings" element={
+                <VendorLayout>
+                  <Settings />
                 </VendorLayout>
               } />
               <Route path="/onboarding" element={
@@ -92,9 +123,17 @@ const App = () => (
                 </VendorLayout>
               } />
               
-              {/* Staff Routes */}
-              <Route path="/staff/dashboard" element={<StaffDashboard />} />
-              <Route path="/staff/services" element={<StaffServices />} />
+              {/* Staff Routes - All wrapped with StaffDashboardLayout */}
+              <Route path="/staff/dashboard" element={
+                <StaffDashboardLayout>
+                  <StaffDashboard />
+                </StaffDashboardLayout>
+              } />
+              <Route path="/staff/services" element={
+                <StaffDashboardLayout>
+                  <StaffServices />
+                </StaffDashboardLayout>
+              } />
             </Routes>
           </div>
         </AuthProvider>

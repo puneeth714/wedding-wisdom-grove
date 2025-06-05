@@ -50,7 +50,7 @@ const VendorSidebar: React.FC = () => {
             <div className="absolute inset-0 bg-sanskara-red rounded-full opacity-80"></div>
             <div className="absolute inset-1 bg-sanskara-gold rounded-full"></div>
             <div className="absolute inset-3 bg-sanskara-cream rounded-full flex items-center justify-center">
-              <span className="text-sanskara-maroon text-xs font-bold">S</span>
+              <span className="text-sanskara-maroon text-xs font-bold">V</span>
             </div>
           </div>
         ) : (
