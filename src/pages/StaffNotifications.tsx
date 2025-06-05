@@ -1,133 +1,167 @@
+import React, { useState, useEffect } from 'react';
+import StaffDashboardLayout from '../components/staff/StaffDashboardLayout';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { BellRing, Loader2 } from 'lucide-react';
+import { supabase } from '../integrations/supabase/client'; // Assuming supabase client for fetching
+import { useAuth } from '@/hooks/useAuthContext'; // To get current staff user
+import { useNavigate } from 'react-router-dom';
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Bell, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
-
-const notifications = [
-  {
-    id: 1,
-    type: 'booking',
-    title: 'New Booking Assignment',
-    message: 'You have been assigned to a new booking for tomorrow.',
-    time: '2 hours ago',
-    read: false,
-    icon: <Bell className="h-4 w-4" />
-  },
-  {
-    id: 2,
-    type: 'task',
-    title: 'Task Completed',
-    message: 'Your venue setup task has been marked as completed.',
-    time: '4 hours ago',
-    read: false,
-    icon: <CheckCircle className="h-4 w-4" />
-  },
-  {
-    id: 3,
-    type: 'reminder',
-    title: 'Upcoming Event Reminder',
-    message: 'You have an event starting in 1 hour.',
-    time: '1 day ago',
-    read: true,
-    icon: <Clock className="h-4 w-4" />
-  },
-  {
-    id: 4,
-    type: 'alert',
-    title: 'Important Update',
-    message: 'New safety protocols have been added to the handbook.',
-    time: '2 days ago',
-    read: true,
-    icon: <AlertTriangle className="h-4 w-4" />
-  }
-];
-
-const getNotificationTypeColor = (type: string) => {
-  switch (type) {
-    case 'booking':
-      return 'bg-blue-100 text-blue-800';
-    case 'task':
-      return 'bg-green-100 text-green-800';
-    case 'reminder':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'alert':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
+interface Notification {
+  notification_id: string;
+  message: string;
+  created_at: string;
+  is_read: boolean;
+  notification_type: string;
+  related_entity_id: string | null;
+  // Add other fields as necessary, e.g., sender_name, link_url
+}
 
 const StaffNotifications: React.FC = () => {
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth(); // Get the authenticated user
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user) {
+        navigate('/staff/login', { replace: true });
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      try {
+        // First, get the staff_id for the current Supabase auth user
+        const { data: staffProfile, error: staffProfileError } = await supabase
+          .from('vendor_staff')
+          .select('staff_id')
+          .eq('supabase_auth_uid', user.id)
+          .single();
+
+        if (staffProfileError) throw staffProfileError;
+        if (!staffProfile) {
+          setError('Staff profile not found.');
+          setLoading(false);
+          return;
+        }
+        
+        // Then, fetch notifications for that staff_id
+        const { data, error: notificationsError } = await supabase
+          .from('notifications')
+          .select('*') // Adjust selection as needed
+          .eq('recipient_staff_id', staffProfile.staff_id)
+          .order('created_at', { ascending: false });
+
+        if (notificationsError) throw notificationsError;
+        setNotifications(data || []);
+      } catch (err: any) {
+        console.error('Error fetching notifications:', err);
+        setError(err.message || 'Failed to fetch notifications.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, [user, navigate]);
+  
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('notification_id', notificationId);
+      if (error) throw error;
+      // Update local state to reflect change
+      setNotifications(prevNotifications =>
+        prevNotifications.map(n =>
+          n.notification_id === notificationId ? { ...n, is_read: true } : n
+        )
+      );
+    } catch (err: any) {
+      console.error('Error marking notification as read:', err);
+      // Optionally show an error toast/message to the user
+    }
+  };
+
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
+          <Loader2 className="h-12 w-12 animate-spin text-sanskara-red" />
+          <p className="mt-4 text-lg text-muted-foreground">Loading notifications...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)] text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+        </div>
+      );
+    }
+
+    return (
+      <Card className="w-full max-w-3xl mx-auto">
+        <CardHeader>
+          <div className="flex items-center space-x-3 mb-1"> {/* Added mb-1 for slight separation from potential subtitle */}
+            <BellRing className="h-7 w-7 text-sanskara-blue" /> {/* Slightly smaller icon for h1 */}
+            <h1 className="text-2xl font-semibold text-gray-700">Notifications</h1>
+          </div>
+           <p className="text-sm text-muted-foreground">
+            Recent alerts and updates relevant to your role.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {notifications.length > 0 ? (
+            <ul className="space-y-4">
+              {notifications.map(notification => (
+                <li 
+                  key={notification.notification_id} 
+                  className={`p-4 rounded-lg shadow-sm border ${
+                    notification.is_read ? 'bg-gray-50' : 'bg-white hover:shadow-md'
+                  } transition-shadow`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className={`text-sm ${notification.is_read ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(notification.created_at).toLocaleString()} - Type: {notification.notification_type}
+                      </p>
+                    </div>
+                    {!notification.is_read && (
+                      <button
+                        onClick={() => handleMarkAsRead(notification.notification_id)}
+                        className="ml-4 text-xs text-sanskara-blue hover:underline whitespace-nowrap"
+                        title="Mark as read"
+                      >
+                        Mark Read
+                      </button>
+                    )}
+                  </div>
+                  {/* Optionally, add a link if related_entity_id and type provide enough info */}
+                  {/* e.g., if (notification.related_entity_id && notification.link_url) navigate(notification.link_url) */}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-700 text-center py-8">You have no new notifications.</p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text">Notifications</h1>
-          <p className="text-muted-foreground mt-1">
-            Stay updated with your latest activities
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="secondary">
-            {unreadCount} unread
-          </Badge>
-          <Button variant="outline" size="sm">
-            Mark all as read
-          </Button>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {notifications.map((notification) => (
-          <Card key={notification.id} className={`${!notification.read ? 'border-l-4 border-l-sanskara-red' : ''}`}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-full ${getNotificationTypeColor(notification.type)}`}>
-                    {notification.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={`font-medium ${!notification.read ? 'font-semibold' : ''}`}>
-                        {notification.title}
-                      </h3>
-                      {!notification.read && (
-                        <div className="w-2 h-2 bg-sanskara-red rounded-full"></div>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {notification.time}
-                    </p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm">
-                  Mark as read
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {notifications.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No notifications</h3>
-            <p className="text-muted-foreground">
-              You're all caught up! New notifications will appear here.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    <StaffDashboardLayout>
+      {renderContent()}
+    </StaffDashboardLayout>
   );
 };
 

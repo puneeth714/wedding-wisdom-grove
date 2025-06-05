@@ -20,19 +20,19 @@ const VendorLayout: React.FC<VendorLayoutProps> = ({ children }) => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2">Verifying vendor access...</p>
+          <p className="mt-2">Verifying access...</p>
         </div>
       </div>
     );
   }
 
-  // If no user, redirect to vendor login
+  // If no user, redirect to login
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If user is staff (not vendor), redirect to staff portal
-  if (staffProfile && !vendorProfile) {
+  // If user is staff, redirect to staff portal
+  if (staffProfile) {
     return <Navigate to="/staff/dashboard" replace />;
   }
 

@@ -9,34 +9,23 @@ import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import StaffLoginPage from "./pages/StaffLoginPage";
 import RegisterPage from "./pages/RegisterPage";
-
-// Vendor Pages
 import Dashboard from "./pages/Dashboard";
 import VendorProfile from "./pages/VendorProfile";
 import EditProfile from "./pages/EditProfile";
 import Services from "./pages/Services";
+import StaffServices from "./pages/StaffServices";
 import Staff from "./pages/Staff";
 import Settings from "./pages/Settings";
 import Bookings from "./pages/Bookings";
 import VendorOnboarding from "./pages/VendorOnboarding";
 import AddService from "./pages/AddService";
 import EditService from "./pages/EditService";
+import StaffDashboard from "./pages/StaffDashboard";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Notifications from "./pages/Notifications";
 import Reviews from "./pages/Reviews";
 import Payments from "./pages/Payments";
-
-// Staff Pages
-import StaffDashboard from "./pages/StaffDashboard";
-import StaffServices from "./pages/StaffServices";
-import StaffBookings from "./pages/StaffBookings";
-import StaffTasks from "./pages/StaffTasks";
-import StaffProfile from "./pages/StaffProfile";
-import StaffSettings from "./pages/StaffSettings";
-import StaffNotifications from "./pages/StaffNotifications";
-
-// Layouts
 import VendorLayout from "./components/VendorLayout";
 import StaffDashboardLayout from "./components/staff/StaffDashboardLayout";
 
@@ -143,31 +132,6 @@ const App = () => (
               <Route path="/staff/services" element={
                 <StaffDashboardLayout>
                   <StaffServices />
-                </StaffDashboardLayout>
-              } />
-              <Route path="/staff/bookings" element={
-                <StaffDashboardLayout>
-                  <StaffBookings />
-                </StaffDashboardLayout>
-              } />
-              <Route path="/staff/tasks" element={
-                <StaffDashboardLayout>
-                  <StaffTasks />
-                </StaffDashboardLayout>
-              } />
-              <Route path="/staff/profile" element={
-                <StaffDashboardLayout>
-                  <StaffProfile />
-                </StaffDashboardLayout>
-              } />
-              <Route path="/staff/settings" element={
-                <StaffDashboardLayout>
-                  <StaffSettings />
-                </StaffDashboardLayout>
-              } />
-              <Route path="/staff/notifications" element={
-                <StaffDashboardLayout>
-                  <StaffNotifications />
                 </StaffDashboardLayout>
               } />
             </Routes>

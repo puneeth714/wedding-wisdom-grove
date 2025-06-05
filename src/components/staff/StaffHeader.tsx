@@ -12,14 +12,30 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/hooks/useAuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const pageTitles: { [key: string]: string } = {
+  '/staff/dashboard': 'Dashboard',
+  '/staff/bookings': 'Bookings',
+  '/staff/tasks': 'Tasks',
+  '/staff/availability': 'Availability',
+  '/staff/services': 'Vendor Services',
+  '/staff/notifications': 'Notifications',
+  '/staff/profile': 'Profile',
+  '/staff/settings': 'Settings',
+};
 
 const StaffHeader: React.FC = () => {
-  const [notificationCount, setNotificationCount] = useState(2);
+  const [notificationCount, setNotificationCount] = useState(0);
   const { staffProfile, user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const getPageTitle = () => {
+    const currentPath = Object.keys(pageTitles).find(path => location.pathname.startsWith(path));
+    return currentPath ? pageTitles[currentPath] : 'Staff Dashboard';
+  };
   
-  // Get initials for avatar fallback
   const getInitials = () => {
     if (staffProfile?.display_name) {
       return staffProfile.display_name
@@ -29,16 +45,18 @@ const StaffHeader: React.FC = () => {
         .toUpperCase()
         .substring(0, 2);
     }
-    return "ST";
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return "S";
   };
 
   const handleProfileClick = () => {
     navigate('/staff/profile');
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/staff/login');
+  const handleSettingsClick = () => {
+    navigate('/staff/settings');
   };
   
   return (
@@ -46,14 +64,17 @@ const StaffHeader: React.FC = () => {
       <div className="flex items-center justify-between h-full px-4">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="text-sanskara-maroon hover:text-sanskara-red transition-colors" />
-          <span className="text-xl font-semibold hidden sm:block gradient-text">Staff Portal</span>
+          <span className="text-xl font-semibold hidden sm:block gradient-text">{getPageTitle()}</span>
         </div>
         
         <div className="flex items-center gap-4">
           <div className="relative">
             <Bell 
               className="h-5 w-5 text-sanskara-maroon hover:text-sanskara-red cursor-pointer transition-colors" 
-              onClick={() => setNotificationCount(0)} 
+              onClick={() => {
+                setNotificationCount(0);
+                navigate('/staff/notifications');
+              }} 
             />
             {notificationCount > 0 && (
               <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center bg-sanskara-red text-white">
@@ -81,7 +102,7 @@ const StaffHeader: React.FC = () => {
                 </div>
                 <div className="flex flex-col space-y-0.5">
                   <p className="text-sm font-medium">{staffProfile?.display_name || 'Staff Member'}</p>
-                  <p className="text-xs text-muted-foreground">{staffProfile?.email || user?.email || ''}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
                 </div>
               </div>
               
@@ -92,14 +113,20 @@ const StaffHeader: React.FC = () => {
                 Profile Settings
               </DropdownMenuItem>
               
-              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/staff/settings')}>
+              <DropdownMenuItem className="cursor-pointer" onClick={handleSettingsClick}>
                 <Settings className="h-4 w-4 mr-2" />
                 Account Settings
               </DropdownMenuItem>
               
               <DropdownMenuSeparator />
               
-              <DropdownMenuItem className="text-red-500 cursor-pointer flex items-center gap-2" onClick={handleLogout}>
+              <DropdownMenuItem 
+                className="text-red-500 cursor-pointer flex items-center gap-2" 
+                onClick={async () => {
+                  await signOut();
+                  navigate('/staff/login', { replace: true });
+                }}
+              >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
               </DropdownMenuItem>

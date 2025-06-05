@@ -1,127 +1,141 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import StaffDashboardLayout from '../components/staff/StaffDashboardLayout';
+import StaffProfileCard from '../components/staff/StaffProfileCard';
+import StaffPortfolioManager from '../components/staff/StaffPortfolioManager';
+import { Loader2 } from 'lucide-react';
+import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuthContext';
-import { User, Mail, Phone, Briefcase } from 'lucide-react';
+
+interface StaffProfile {
+  staff_id: string;
+  vendor_id: string;
+  display_name: string;
+  email: string;
+  phone_number?: string;
+  role: string;
+  bio?: string;
+  skills?: string[];
+  experience_years?: number;
+  profile_image_url?: string;
+  address?: string;
+  date_of_birth?: string;
+  emergency_contact?: string;
+  emergency_phone?: string;
+  joining_date?: string;
+}
+
+interface StaffProfileData {
+  bio?: string;
+  skills?: string[];
+  experience_years?: number;
+  address?: string;
+  date_of_birth?: string;
+  emergency_contact?: string;
+  emergency_phone?: string;
+}
 
 const StaffProfile: React.FC = () => {
-  const { staffProfile, user } = useAuth();
+  const navigate = useNavigate();
+  const { user, staffProfile, isLoading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<StaffProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      navigate('/staff/login', { replace: true });
+      return;
+    }
+
+    if (staffProfile?.staff_id) {
+      loadProfileData();
+    }
+  }, [user, authLoading, navigate, staffProfile]);
+
+  const loadProfileData = async () => {
+    if (!staffProfile?.staff_id) return;
+
+    try {
+      // Get basic staff data
+      const { data: staffData, error: staffError } = await supabase
+        .from('vendor_staff')
+        .select('*')
+        .eq('staff_id', staffProfile.staff_id)
+        .single();
+
+      if (staffError) throw staffError;
+
+      // Get additional profile data from staff_portfolios generic_attributes
+      const { data: profileData, error: profileError } = await supabase
+        .from('staff_portfolios')
+        .select('generic_attributes')
+        .eq('staff_id', staffProfile.staff_id)
+        .eq('portfolio_type', 'profile_data')
+        .maybeSingle();
+
+      // Parse additional profile data
+      let additionalData: StaffProfileData = {};
+      if (profileData?.generic_attributes) {
+        additionalData = profileData.generic_attributes as StaffProfileData;
+      }
+      
+      // Combine basic staff data with additional profile data
+      const profileData_combined: StaffProfile = {
+        staff_id: staffData.staff_id,
+        vendor_id: staffData.vendor_id,
+        display_name: staffData.display_name,
+        email: staffData.email,
+        phone_number: staffData.phone_number,
+        role: staffData.role,
+        bio: additionalData.bio,
+        skills: additionalData.skills,
+        experience_years: additionalData.experience_years,
+        address: additionalData.address,
+        date_of_birth: additionalData.date_of_birth,
+        emergency_contact: additionalData.emergency_contact,
+        emergency_phone: additionalData.emergency_phone,
+        joining_date: staffData.created_at
+      };
+      
+      setProfile(profileData_combined);
+    } catch (err: any) {
+      console.error('Error loading profile:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || authLoading) {
+    return (
+      <StaffDashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
+          <Loader2 className="h-12 w-12 animate-spin text-sanskara-red" />
+          <p className="mt-4 text-lg text-muted-foreground">Loading profile...</p>
+        </div>
+      </StaffDashboardLayout>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <StaffDashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)] text-center">
+          <p className="text-red-600 mb-4">Profile not found</p>
+        </div>
+      </StaffDashboardLayout>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold gradient-text">My Profile</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your profile information and settings
-        </p>
+    <StaffDashboardLayout>
+      <div className="space-y-6 p-4 sm:p-6">
+        <StaffProfileCard profile={profile} onUpdate={loadProfileData} />
+        <StaffPortfolioManager staffId={profile.staff_id} />
       </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Personal Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
-              <Input 
-                id="displayName" 
-                value={staffProfile?.display_name || ''} 
-                placeholder="Enter your display name"
-                readOnly
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="email" 
-                  value={staffProfile?.email || user?.email || ''} 
-                  placeholder="Enter your email"
-                  readOnly
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="phone" 
-                  value={staffProfile?.phone_number || ''} 
-                  placeholder="Enter your phone number"
-                  readOnly
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5" />
-              Work Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Input 
-                id="role" 
-                value={staffProfile?.role || ''} 
-                placeholder="Your role"
-                readOnly
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Input 
-                id="status" 
-                value={staffProfile?.is_active ? 'Active' : 'Inactive'} 
-                readOnly
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="invitationStatus">Invitation Status</Label>
-              <Input 
-                id="invitationStatus" 
-                value={staffProfile?.invitation_status || ''} 
-                readOnly
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>About</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea 
-            placeholder="Tell us about yourself..."
-            className="min-h-[100px]"
-            readOnly
-          />
-          <p className="text-sm text-muted-foreground mt-2">
-            Profile editing functionality will be available soon.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    </StaffDashboardLayout>
   );
 };
 
