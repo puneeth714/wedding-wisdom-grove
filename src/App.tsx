@@ -23,6 +23,8 @@ import EditService from "./pages/EditService";
 import StaffDashboard from "./pages/StaffDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StaffProtectedRoute from "./components/StaffProtectedRoute";
+import VendorLayout from "./components/VendorLayout";
+import StaffDashboardLayout from "./components/staff/StaffDashboardLayout";
 import Navbar from "./components/Navbar";
 
 const queryClient = new QueryClient();
@@ -35,35 +37,129 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <div className="min-h-screen bg-background">
-            <Navbar />
-            <main className="container mx-auto px-4 py-8">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/staff/login" element={<StaffLoginPage />} />
-                <Route path="/signup" element={<RegisterPage />} />
-                
-                {/* Vendor Routes */}
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><VendorProfile /></ProtectedRoute>} />
-                <Route path="/profile/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-                <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
-                <Route path="/services/add" element={<ProtectedRoute><AddService /></ProtectedRoute>} />
-                <Route path="/services/edit/:serviceId" element={<ProtectedRoute><EditService /></ProtectedRoute>} />
-                <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-                <Route path="/onboarding" element={<ProtectedRoute><VendorOnboarding /></ProtectedRoute>} />
-                
-                {/* Staff Routes */}
-                <Route path="/staff/dashboard" element={<StaffProtectedRoute />}>
-                  <Route index element={<StaffDashboard />} />
-                </Route>
-                <Route path="/staff/services" element={<StaffProtectedRoute />}>
-                  <Route index element={<StaffServices />} />
-                </Route>
-              </Routes>
-            </main>
+            <Routes>
+              {/* Public Routes - with Navbar */}
+              <Route path="/" element={
+                <>
+                  <Navbar />
+                  <main className="container mx-auto px-4 py-8">
+                    <Index />
+                  </main>
+                </>
+              } />
+              <Route path="/login" element={
+                <>
+                  <Navbar />
+                  <main className="container mx-auto px-4 py-8">
+                    <LoginPage />
+                  </main>
+                </>
+              } />
+              <Route path="/signup" element={
+                <>
+                  <Navbar />
+                  <main className="container mx-auto px-4 py-8">
+                    <RegisterPage />
+                  </main>
+                </>
+              } />
+              <Route path="/staff/login" element={
+                <>
+                  <Navbar />
+                  <main className="container mx-auto px-4 py-8">
+                    <StaffLoginPage />
+                  </main>
+                </>
+              } />
+              
+              {/* Vendor Routes - with VendorLayout */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <Dashboard />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <VendorProfile />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/profile/edit" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <EditProfile />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/services" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <Services />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/services/add" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <AddService />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/services/edit/:serviceId" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <EditService />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/staff" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <Staff />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <Settings />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/bookings" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <Bookings />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/onboarding" element={
+                <ProtectedRoute>
+                  <VendorLayout>
+                    <VendorOnboarding />
+                  </VendorLayout>
+                </ProtectedRoute>
+              } />
+              
+              {/* Staff Routes - with StaffDashboardLayout */}
+              <Route path="/staff/dashboard" element={
+                <StaffProtectedRoute>
+                  <StaffDashboardLayout>
+                    <StaffDashboard />
+                  </StaffDashboardLayout>
+                </StaffProtectedRoute>
+              } />
+              <Route path="/staff/services" element={
+                <StaffProtectedRoute>
+                  <StaffDashboardLayout>
+                    <StaffServices />
+                  </StaffDashboardLayout>
+                </StaffProtectedRoute>
+              } />
+            </Routes>
           </div>
         </AuthProvider>
       </BrowserRouter>

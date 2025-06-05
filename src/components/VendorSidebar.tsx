@@ -68,7 +68,7 @@ const VendorSidebar: React.FC = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/" end className={getNavClass}>
+                  <NavLink to="/dashboard" end className={getNavClass}>
                     <div className="flex items-center py-2 px-3 gap-3">
                       <Store className="h-5 w-5 flex-shrink-0" />
                       {!collapsed && <span>Dashboard</span>}
