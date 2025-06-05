@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
@@ -71,6 +72,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // ... keep existing code (state declarations and other functions)
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,7 +128,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Fetch staff profile data
+  // ... keep existing code (fetchStaffProfile and other functions)
   const fetchStaffProfile = async (userId: string) => {
     try {
       setIsLoadingProfile(true);
@@ -225,6 +227,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // ... keep existing code (signIn, signUp, signOut functions)
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);

@@ -50,6 +50,7 @@ CREATE TABLE vendors (
     pricing_range JSONB, -- {"min": 5000, "max": 15000, ...}
     rating FLOAT CHECK (rating >= 0 AND rating <= 5),
     description TEXT,
+    details JSONB, -- Additional details 
     portfolio_image_urls TEXT[], -- URLs to Supabase Storage
     is_active BOOLEAN DEFAULT true,
     supabase_auth_uid UUID UNIQUE NULL REFERENCES auth.users(id), -- Supabase Auth ID of primary vendor owner/admin
@@ -284,7 +285,7 @@ CREATE TABLE vendor_services (
     price_unit VARCHAR(50),
     min_capacity INT,
     max_capacity INT,
-    customizability_details TEXT,
+    customizability_details JSONB,
     is_in_house BOOLEAN DEFAULT true,
     is_negotiable BOOLEAN DEFAULT false,
     responsible_staff_id UUID NULL REFERENCES vendor_staff(staff_id) ON DELETE SET NULL,
@@ -544,5 +545,3 @@ EXECUTE FUNCTION trigger_set_timestamp();
 -- DROP TABLE IF EXISTS public.notifications CASCADE;
 -- DROP TABLE IF EXISTS public.task_templates CASCADE;
 
-ALTER TABLE users
-ADD COLUMN user_type VARCHAR(50) NOT NULL DEFAULT 'customer';

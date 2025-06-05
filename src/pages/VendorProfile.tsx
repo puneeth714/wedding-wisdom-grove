@@ -1,16 +1,16 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, User, MapPin, DollarSign, Star, Settings } from "lucide-react";
+import { Loader2, User, MapPin, DollarSign, Star, Settings, ImageIcon } from "lucide-react";
 import { useAuth } from '@/hooks/useAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import TaggedImageUploader from '@/components/TaggedImageUploader';
+import { TaggedImages, convertToTaggedImages, convertForDatabase } from '@/utils/taggedUploadHelpers';
 
 const VendorProfile: React.FC = () => {
   const { vendorProfile, refreshVendorProfile } = useAuth();
@@ -44,6 +44,9 @@ const VendorProfile: React.FC = () => {
   const [specializations, setSpecializations] = useState<string>('');
   const [policies, setPolicies] = useState<string>('');
   const [ritualOfferings, setRitualOfferings] = useState<string>('');
+
+  // Portfolio images state
+  const [portfolioImages, setPortfolioImages] = useState<TaggedImages | null>(null);
 
   useEffect(() => {
     if (vendorProfile) {
@@ -108,6 +111,10 @@ const VendorProfile: React.FC = () => {
           setRitualOfferings(vendorProfile.details.ritual_offerings);
         }
       }
+      
+      // Portfolio images
+      const convertedImages = convertToTaggedImages(vendorProfile.portfolio_image_urls);
+      setPortfolioImages(convertedImages);
     }
   }, [vendorProfile]);
 
@@ -144,7 +151,8 @@ const VendorProfile: React.FC = () => {
           specializations: specializations ? specializations.split(',').map(item => item.trim()).filter(Boolean) : [],
           policies: policies ? policies.split(',').map(item => item.trim()).filter(Boolean) : [],
           ritual_offerings: ritualOfferings ? ritualOfferings.split(',').map(item => item.trim()).filter(Boolean) : []
-        }
+        },
+        portfolio_image_urls: convertForDatabase(portfolioImages)
       };
 
       console.log("Update data:", updateData);
@@ -462,6 +470,28 @@ const VendorProfile: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Portfolio Images */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <ImageIcon className="h-5 w-5 mr-2" />
+            Portfolio Images
+          </CardTitle>
+          <CardDescription>Upload and organize your portfolio images by categories</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TaggedImageUploader
+            taggedImages={portfolioImages}
+            onImagesChange={setPortfolioImages}
+            bucket="vendors"
+            folder={vendorProfile.vendor_id}
+            category={vendorCategory || 'general'}
+            maxFilesPerTag={15}
+            maxTotalFiles={50}
+          />
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={isLoading}>
           {isLoading ? (
@@ -479,4 +509,3 @@ const VendorProfile: React.FC = () => {
 };
 
 export default VendorProfile;
-

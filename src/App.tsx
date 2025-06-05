@@ -1,116 +1,74 @@
 
-import { Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import Dashboard from './pages/Dashboard';
-import Bookings from './pages/Bookings';
-import Calendar from './pages/Calendar';
-import Profile from './pages/Profile';
-import EditProfile from './pages/EditProfile';
-import Settings from './pages/Settings';
-import Services from './pages/Services';
-import AddService from './pages/AddService';
-import EditService from './pages/EditService';
-import Staff from './pages/Staff';
-import Tasks from './pages/Tasks';
-import NotFound from './pages/NotFound';
-import MainLayout from './layouts/MainLayout';
-import ProtectedRoute from './components/ProtectedRoute';
-import { useAuth } from './hooks/useAuthContext';
-import { DataCacheProvider } from './hooks/useDataCache';
-import Reviews from './pages/Reviews';
-import Payments from './pages/Payments';
-import Notifications from './pages/Notifications';
-import VendorOnboarding from './pages/VendorOnboarding';
-import StaffLoginPage from './pages/StaffLoginPage';
-import StaffDashboard from './pages/StaffDashboard';
-import StaffProtectedRoute from './components/StaffProtectedRoute';
-import StaffOnboarding from './pages/StaffOnboarding';
-import StaffResetPassword from './pages/StaffResetPassword';
-import StaffTasks from './pages/StaffTasks';
-import StaffBookings from './pages/StaffBookings';
-import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
-import StaffVendorServicesPage from './pages/StaffVendorServicesPage';
-import StaffNotifications from './pages/StaffNotifications';
-import StaffProfile from './pages/StaffProfile';
-import StaffSettings from './pages/StaffSettings';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuthContext";
+import Index from "./pages/Index";
+import LoginPage from "./pages/LoginPage";
+import StaffLoginPage from "./pages/StaffLoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import Dashboard from "./pages/Dashboard";
+import VendorProfile from "./pages/VendorProfile";
+import EditProfile from "./pages/EditProfile";
+import Services from "./pages/Services";
+import StaffServices from "./pages/StaffServices";
+import Staff from "./pages/Staff";
+import Settings from "./pages/Settings";
+import Bookings from "./pages/Bookings";
+import VendorOnboarding from "./pages/VendorOnboarding";
+import AddService from "./pages/AddService";
+import EditService from "./pages/EditService";
+import StaffDashboard from "./pages/StaffDashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
+import StaffProtectedRoute from "./components/StaffProtectedRoute";
+import Navbar from "./components/Navbar";
 
-function App() {
-  const { user, vendorProfile } = useAuth();
-  
-  // Check if vendor needs to complete onboarding for first-time users
-  const needsOnboarding = user && 
-    (!vendorProfile || 
-     !vendorProfile.vendor_name || 
-     !vendorProfile.vendor_category || 
-     !vendorProfile.description);
-  
-  return (
-    <DataCacheProvider>
-      <Routes>
-        {/* Public routes */}
-        <Route 
-          path="/login" 
-          element={user ? <Navigate to="/" replace /> : <LoginPage />} 
-        />
-        <Route path="/staff/login" element={<StaffLoginPage />} />
-        
-        {/* Protected Staff Routes */}
-        <Route element={<StaffProtectedRoute />}>
-          <Route path="/staff/dashboard" element={<StaffDashboard />} />
-          <Route path="/staff/onboarding" element={<StaffOnboarding />} />
-          <Route path="/staff/reset-password" element={<StaffResetPassword />} />
-          <Route path="/staff/tasks" element={<StaffTasks />} />
-          <Route path="/staff/bookings" element={<StaffBookings />} />
-          <Route path="/staff/availability" element={<StaffAvailabilityPage />} />
-          <Route path="/staff/services" element={<StaffVendorServicesPage />} />
-          <Route path="/staff/notifications" element={<StaffNotifications />} />
-          <Route path="/staff/profile" element={<StaffProfile />} />
-          <Route path="/staff/settings" element={<StaffSettings />} />
-        </Route>
-        
-        {/* Vendor onboarding route - accessible to authenticated users */}
-        <Route 
-          path="/onboarding" 
-          element={
-            user ? (
-              <VendorOnboarding />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
-        
-        {/* Protected routes with onboarding redirect for first-time vendors */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            {needsOnboarding ? (
-              <Navigate to="/onboarding" replace />
-            ) : (
-              <MainLayout />
-            )}
-          </ProtectedRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="bookings" element={<Bookings />} />
-          <Route path="calendar" element={<Calendar />} />
-          <Route path="services" element={<Services />} />
-          <Route path="services/add" element={<AddService />} />
-          <Route path="services/edit/:serviceId" element={<EditService />} />
-          <Route path="staff" element={<Staff />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="payments" element={<Payments />} />
-          <Route path="notifications" element={<Notifications />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="profile/edit" element={<EditProfile />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="reviews" element={<Reviews />} />
-        </Route>
-        
-        {/* 404 route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </DataCacheProvider>
-  );
-}
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <div className="min-h-screen bg-background">
+            <Navbar />
+            <main className="container mx-auto px-4 py-8">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/staff/login" element={<StaffLoginPage />} />
+                <Route path="/signup" element={<RegisterPage />} />
+                
+                {/* Vendor Routes */}
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><VendorProfile /></ProtectedRoute>} />
+                <Route path="/profile/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+                <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
+                <Route path="/services/add" element={<ProtectedRoute><AddService /></ProtectedRoute>} />
+                <Route path="/services/edit/:serviceId" element={<ProtectedRoute><EditService /></ProtectedRoute>} />
+                <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+                <Route path="/onboarding" element={<ProtectedRoute><VendorOnboarding /></ProtectedRoute>} />
+                
+                {/* Staff Routes */}
+                <Route path="/staff/dashboard" element={<StaffProtectedRoute />}>
+                  <Route index element={<StaffDashboard />} />
+                </Route>
+                <Route path="/staff/services" element={<StaffProtectedRoute />}>
+                  <Route index element={<StaffServices />} />
+                </Route>
+              </Routes>
+            </main>
+          </div>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
