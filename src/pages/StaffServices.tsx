@@ -71,7 +71,7 @@ const StaffServices: React.FC = () => {
           )
         `)
         .eq('staff_id', staffData.staff_id);
-
+      console.log('Service Assignments:', serviceAssignments);
       if (assignmentError) throw assignmentError;
 
       const services = (serviceAssignments || []).map(assignment => ({

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/DashboardCard';
@@ -46,29 +45,36 @@ const VendorServicesWidget: React.FC = () => {
           return;
         }
 
-        // Get assigned services
+        // Get assigned services with full details from vendor_services
         const { data: serviceAssignments, error: assignmentError } = await supabase
           .from('vendor_service_staff')
           .select(`
             service_id,
             vendor_services(
+              service_id,
               service_name,
-              service_category
+              service_category,
+              description,
+              base_price,
+              price_unit,
+              is_negotiable,
+              vendor_id
             )
           `)
           .eq('staff_id', staffData.staff_id);
-
         if (assignmentError) throw assignmentError;
 
-        const services = (serviceAssignments || []).map(assignment => ({
-          service_id: assignment.service_id,
-          service_name: assignment.vendor_services?.service_name || 'Unknown Service',
-          service_category: assignment.vendor_services?.service_category || 'Unknown',
-          vendor_name: (staffData.vendors as any)?.vendor_name || 'Unknown Vendor'
-        }));
+        const services = (serviceAssignments || [])
+          .map(assignment => assignment.vendor_services)
+          .filter(Boolean)
+          .map(service => ({
+            service_id: service.service_id,
+            service_name: service.service_name || 'Unknown Service',
+            service_category: service.service_category || 'Unknown',
+            vendor_name: (staffData.vendors as any)?.vendor_name || 'Unknown Vendor'
+          }));
 
         setAssignedServices(services);
-
       } catch (err: any) {
         console.error('Error fetching assigned services:', err);
         setError(err.message || 'Failed to fetch data.');
