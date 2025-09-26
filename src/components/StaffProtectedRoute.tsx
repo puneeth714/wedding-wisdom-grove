@@ -4,7 +4,11 @@ import { supabase } from '../integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthContext';
 
-const StaffProtectedRoute: React.FC = () => {
+interface StaffProtectedRouteProps {
+  children?: React.ReactNode;
+}
+
+const StaffProtectedRoute: React.FC<StaffProtectedRouteProps> = ({ children }) => {
   const { user, isLoading: authLoading, staffProfile, isLoadingStaffProfile } = useAuth();
   const navigate = useNavigate();
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
@@ -25,7 +29,9 @@ const StaffProtectedRoute: React.FC = () => {
       setRedirectPath('/staff/login');
     } else if (!staffProfile.is_active || !staffProfile.display_name || !staffProfile.role || staffProfile.invitation_status === 'pending') {
       // Staff profile exists but needs onboarding
-      setRedirectPath('/staff/onboarding');
+      if (window.location.pathname !== '/staff/onboarding') {
+        setRedirectPath('/staff/onboarding');
+      }
     } else {
       // All checks passed, clear any redirection path
       setRedirectPath(null);
@@ -45,7 +51,9 @@ const StaffProtectedRoute: React.FC = () => {
     );
   }
 
-  return <Outlet />;
+  // If children are provided (for onboarding route), render them
+  // Otherwise render Outlet for nested routes
+  return children || <Outlet />;
 };
 
 export default StaffProtectedRoute;

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import StaffDashboardLayout from '@/components/staff/StaffDashboardLayout';
 import DashboardCard from '@/components/DashboardCard';
 import { Calendar, CheckCircle2, Clock, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthContext';
@@ -117,136 +116,132 @@ const StaffDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <StaffDashboardLayout>
-        <div className="space-y-6 animate-pulse">
-          <div>
-            <div className="h-8 w-64 bg-gray-200 rounded mb-2"></div>
-            <div className="h-4 w-96 bg-gray-200 rounded"></div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-64 bg-gray-200 rounded"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-          </div>
+      <div className="space-y-6 animate-pulse">
+        <div>
+          <div className="h-8 w-64 bg-muted rounded mb-2"></div>
+          <div className="h-4 w-96 bg-muted rounded"></div>
         </div>
-      </StaffDashboardLayout>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-32 bg-muted rounded"></div>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-64 bg-muted rounded"></div>
+          <div className="h-64 bg-muted rounded"></div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <StaffDashboardLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text">
-            Welcome, {staffProfile?.display_name || 'Staff Member'}!
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Here's an overview of your tasks and upcoming events.
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DashboardCard 
-            title="Total Tasks"
-            value={stats.totalTasks.toString()}
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            color="sanskara-red"
-          />
-          <DashboardCard 
-            title="Pending Tasks"
-            value={stats.pendingTasks.toString()}
-            icon={<Clock className="h-5 w-5" />}
-            color="sanskara-amber"
-          />
-          <DashboardCard 
-            title="Upcoming Events"
-            value={stats.upcomingBookings.toString()}
-            icon={<Calendar className="h-5 w-5" />}
-            color="sanskara-blue"
-          />
-          <DashboardCard 
-            title="Completed Tasks"
-            value={stats.completedTasks.toString()}
-            icon={<Users className="h-5 w-5" />}
-            color="sanskara-green"
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Tasks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentTasks.length > 0 ? (
-                <div className="space-y-3">
-                  {recentTasks.map(task => (
-                    <div key={task.vendor_task_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-sm">{task.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'} 
-                          {task.priority && ` • ${task.priority}`}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        task.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                        task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                        task.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {task.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No tasks assigned yet.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {upcomingBookings.length > 0 ? (
-                <div className="space-y-3">
-                  {upcomingBookings.map(booking => (
-                    <div key={booking.booking_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-sm">
-                          {booking.users?.display_name || 'Unknown Client'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(booking.event_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        booking.booking_status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                        booking.booking_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {booking.booking_status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No upcoming bookings.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+    <div className="space-y-6 animate-fade-in">
+      <div>
+        <h1 className="text-3xl font-bold gradient-text">
+          Welcome, {staffProfile?.display_name || 'Staff Member'}!
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Here's an overview of your tasks and upcoming events.
+        </p>
       </div>
-    </StaffDashboardLayout>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <DashboardCard 
+          title="Total Tasks"
+          value={stats.totalTasks.toString()}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          color="sanskara-red"
+        />
+        <DashboardCard 
+          title="Pending Tasks"
+          value={stats.pendingTasks.toString()}
+          icon={<Clock className="h-5 w-5" />}
+          color="sanskara-amber"
+        />
+        <DashboardCard 
+          title="Upcoming Events"
+          value={stats.upcomingBookings.toString()}
+          icon={<Calendar className="h-5 w-5" />}
+          color="sanskara-blue"
+        />
+        <DashboardCard 
+          title="Completed Tasks"
+          value={stats.completedTasks.toString()}
+          icon={<Users className="h-5 w-5" />}
+          color="sanskara-green"
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentTasks.length > 0 ? (
+              <div className="space-y-3">
+                {recentTasks.map(task => (
+                  <div key={task.vendor_task_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm">{task.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'} 
+                        {task.priority && ` • ${task.priority}`}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      task.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
+                      task.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' :
+                      task.status === 'Pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {task.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No tasks assigned yet.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Bookings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcomingBookings.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingBookings.map(booking => (
+                  <div key={booking.booking_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm">
+                        {booking.users?.display_name || 'Unknown Client'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(booking.event_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      booking.booking_status === 'confirmed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
+                      booking.booking_status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {booking.booking_status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No upcoming bookings.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 
