@@ -3,6 +3,7 @@ import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthContext';
+import StaffDashboardLayout from './staff/StaffDashboardLayout';
 
 interface StaffProtectedRouteProps {
   children?: React.ReactNode;
@@ -52,8 +53,12 @@ const StaffProtectedRoute: React.FC<StaffProtectedRouteProps> = ({ children }) =
   }
 
   // If children are provided (for onboarding route), render them
-  // Otherwise render Outlet for nested routes
-  return children || <Outlet />;
+  // Otherwise render Outlet with StaffDashboardLayout for nested routes
+  return children || (
+    <StaffDashboardLayout>
+      <Outlet />
+    </StaffDashboardLayout>
+  );
 };
 
 export default StaffProtectedRoute;
