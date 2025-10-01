@@ -6,38 +6,12 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type ImageArtifacts = {
-  artifact_id: string;
-  wedding_id: string;
-  artifact_filename: string;
-  supabase_url: string;
-  generation_prompt: string | null;
-  image_type: string;
-  metadata: Json | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export type TaskFeedback = {
-  feedback_id: string;
-  task_id: string;
-  user_id: string;
-  feedback_type: string;
-  content: string;
-  created_at: string;
-}
-
-export type TaskApproval = {
-  approval_id: string;
-  task_id: string;
-  approving_party: string;
-  status: string;
-  approved_by_user_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       booking_services: {
@@ -70,13 +44,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "booking_services_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["booking_id"]
-          },
-          {
             foreignKeyName: "booking_services_vendor_service_id_fkey"
             columns: ["vendor_service_id"]
             isOneToOne: false
@@ -84,198 +51,26 @@ export type Database = {
             referencedColumns: ["service_id"]
           },
         ]
-      },
-      image_artifacts: {
-        Row: {
-          artifact_id: string
-          wedding_id: string
-          artifact_filename: string
-          supabase_url: string
-          generation_prompt: string | null
-          image_type: string
-          metadata: Json | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          artifact_id?: string
-          wedding_id: string
-          artifact_filename: string
-          supabase_url: string
-          generation_prompt?: string | null
-          image_type: string
-          metadata?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          artifact_id?: string
-          wedding_id?: string
-          artifact_filename?: string
-          supabase_url?: string
-          generation_prompt?: string | null
-          image_type?: string
-          metadata?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "image_artifacts_wedding_id_fkey"
-            columns: ["wedding_id"]
-            isOneToOne: false
-            referencedRelation: "weddings"
-            referencedColumns: ["wedding_id"]
-          },
-        ]
-      },
-      task_approvals: {
-        Row: {
-          approval_id: string
-          task_id: string
-          approving_party: string
-          status: string
-          approved_by_user_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          approval_id?: string
-          task_id: string
-          approving_party: string
-          status: string
-          approved_by_user_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          approval_id?: string
-          task_id?: string
-          approving_party?: string
-          status?: string
-          approved_by_user_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_approvals_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["task_id"]
-          },
-          {
-            foreignKeyName: "task_approvals_approved_by_user_id_fkey"
-            columns: ["approved_by_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
       }
-      task_feedback: {
-        Row: {
-          feedback_id: string
-          task_id: string
-          user_id: string
-          feedback_type: string
-          content: string
-          created_at: string
-        }
-        Insert: {
-          feedback_id?: string
-          task_id: string
-          user_id: string
-          feedback_type: string
-          content: string
-          created_at?: string
-        }
-        Update: {
-          feedback_id?: string
-          task_id?: string
-          user_id?: string
-          feedback_type?: string
-          content?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_feedback_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["task_id"]
-          },
-          {
-            foreignKeyName: "task_feedback_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      memories: {
-        Row: {
-          content: string | null
-          created_at: string
-          embedding: string | null
-          memory_id: string
-          metadata: Json | null
-          /**
-           * @description The user_id in this context is now grouped by wedding_id.
-           */
-          user_id: string
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          embedding?: string | null
-          memory_id?: string
-          metadata?: Json | null
-          /**
-           * @description The user_id in this context is now grouped by wedding_id.
-           */
-          user_id: string
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          embedding?: string | null
-          memory_id?: string
-          metadata?: Json | null
-          /**
-           * @description The user_id in this context is now grouped by wedding_id.
-           */
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "memories_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      },
       bookings: {
         Row: {
           advance_amount_due: number | null
           booking_id: string
+          booking_source: string
           booking_status: string
           commission_amount: number | null
           commission_rate_applied: number | null
           contract_details_url: string | null
           created_at: string | null
+          created_by_staff_id: string | null
+          custom_customer_details: Json | null
           event_date: string
           notes_for_user: string | null
           notes_for_vendor: string | null
           paid_amount: number | null
           total_amount: number | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
           user_shortlisted_vendor_id: string | null
           vendor_id: string
           wedding_id: string | null
@@ -283,18 +78,21 @@ export type Database = {
         Insert: {
           advance_amount_due?: number | null
           booking_id?: string
+          booking_source?: string
           booking_status?: string
           commission_amount?: number | null
           commission_rate_applied?: number | null
           contract_details_url?: string | null
           created_at?: string | null
+          created_by_staff_id?: string | null
+          custom_customer_details?: Json | null
           event_date: string
           notes_for_user?: string | null
           notes_for_vendor?: string | null
           paid_amount?: number | null
           total_amount?: number | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
           user_shortlisted_vendor_id?: string | null
           vendor_id: string
           wedding_id?: string | null
@@ -302,23 +100,33 @@ export type Database = {
         Update: {
           advance_amount_due?: number | null
           booking_id?: string
+          booking_source?: string
           booking_status?: string
           commission_amount?: number | null
           commission_rate_applied?: number | null
           contract_details_url?: string | null
           created_at?: string | null
+          created_by_staff_id?: string | null
+          custom_customer_details?: Json | null
           event_date?: string
           notes_for_user?: string | null
           notes_for_vendor?: string | null
           paid_amount?: number | null
           total_amount?: number | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
           user_shortlisted_vendor_id?: string | null
           vendor_id?: string
           wedding_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_staff"
+            referencedColumns: ["staff_id"]
+          },
           {
             foreignKeyName: "bookings_user_id_fkey"
             columns: ["user_id"]
@@ -340,51 +148,53 @@ export type Database = {
             referencedRelation: "vendors"
             referencedColumns: ["vendor_id"]
           },
+          {
+            foreignKeyName: "bookings_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["wedding_id"]
+          },
         ]
       }
       budget_items: {
         Row: {
           amount: number
           category: string
+          contribution_by: string | null
           created_at: string | null
           item_id: string
           item_name: string
           status: string | null
           updated_at: string | null
-          user_id: string
           vendor_name: string | null
+          wedding_id: string | null
         }
         Insert: {
           amount: number
           category: string
+          contribution_by?: string | null
           created_at?: string | null
           item_id?: string
           item_name: string
           status?: string | null
           updated_at?: string | null
-          user_id: string
           vendor_name?: string | null
+          wedding_id?: string | null
         }
         Update: {
           amount?: number
           category?: string
+          contribution_by?: string | null
           created_at?: string | null
           item_id?: string
           item_name?: string
           status?: string | null
           updated_at?: string | null
-          user_id?: string
           vendor_name?: string | null
+          wedding_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "budget_items_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       chat_messages: {
         Row: {
@@ -423,35 +233,36 @@ export type Database = {
       }
       chat_sessions: {
         Row: {
+          adk_session_id: string | null
           created_at: string | null
+          final_summary: string | null
           last_updated_at: string | null
           session_id: string
-          summary: string | null
-          user_id: string
+          summary: Json | null
+          updated_at: string | null
+          wedding_id: string | null
         }
         Insert: {
+          adk_session_id?: string | null
           created_at?: string | null
+          final_summary?: string | null
           last_updated_at?: string | null
           session_id?: string
-          summary?: string | null
-          user_id: string
+          summary?: Json | null
+          updated_at?: string | null
+          wedding_id?: string | null
         }
         Update: {
+          adk_session_id?: string | null
           created_at?: string | null
+          final_summary?: string | null
           last_updated_at?: string | null
           session_id?: string
-          summary?: string | null
-          user_id?: string
+          summary?: Json | null
+          updated_at?: string | null
+          wedding_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "chat_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       guest_list: {
         Row: {
@@ -464,7 +275,7 @@ export type Database = {
           side: string | null
           status: string | null
           updated_at: string | null
-          user_id: string
+          wedding_id: string | null
         }
         Insert: {
           contact_info?: string | null
@@ -476,7 +287,7 @@ export type Database = {
           side?: string | null
           status?: string | null
           updated_at?: string | null
-          user_id: string
+          wedding_id?: string | null
         }
         Update: {
           contact_info?: string | null
@@ -488,45 +299,67 @@ export type Database = {
           side?: string | null
           status?: string | null
           updated_at?: string | null
+          wedding_id?: string | null
+        }
+        Relationships: []
+      }
+      memories: {
+        Row: {
+          app_name: string
+          content: Json
+          created_at: string
+          embedding: string
+          memory_id: string
+          user_id: string
+        }
+        Insert: {
+          app_name: string
+          content: Json
+          created_at?: string
+          embedding: string
+          memory_id?: string
+          user_id: string
+        }
+        Update: {
+          app_name?: string
+          content?: Json
+          created_at?: string
+          embedding?: string
+          memory_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "guest_list_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       mood_board_items: {
         Row: {
-          artifact_id: string | null
           category: string | null
           created_at: string | null
           image_url: string
           item_id: string
           mood_board_id: string
           note: string | null
+          owner_party: string | null
+          visibility: string
         }
         Insert: {
-          artifact_id?: string | null
           category?: string | null
           created_at?: string | null
           image_url: string
           item_id?: string
           mood_board_id: string
           note?: string | null
+          owner_party?: string | null
+          visibility?: string
         }
         Update: {
-          artifact_id?: string | null
           category?: string | null
           created_at?: string | null
           image_url?: string
           item_id?: string
           mood_board_id?: string
           note?: string | null
+          owner_party?: string | null
+          visibility?: string
         }
         Relationships: [
           {
@@ -544,34 +377,32 @@ export type Database = {
           description: string | null
           mood_board_id: string
           name: string
+          owner_party: string | null
           updated_at: string | null
-          user_id: string
+          visibility: string
+          wedding_id: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           mood_board_id?: string
           name?: string
+          owner_party?: string | null
           updated_at?: string | null
-          user_id: string
+          visibility?: string
+          wedding_id?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           mood_board_id?: string
           name?: string
+          owner_party?: string | null
           updated_at?: string | null
-          user_id?: string
+          visibility?: string
+          wedding_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "mood_boards_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -640,7 +471,7 @@ export type Database = {
           payment_type: string
           transaction_id: string | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -654,7 +485,7 @@ export type Database = {
           payment_type?: string
           transaction_id?: string | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -668,16 +499,9 @@ export type Database = {
           payment_type?: string
           transaction_id?: string | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "payments_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["booking_id"]
-          },
           {
             foreignKeyName: "payments_user_id_fkey"
             columns: ["user_id"]
@@ -719,13 +543,6 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "reviews_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: true
-            referencedRelation: "bookings"
-            referencedColumns: ["booking_id"]
-          },
           {
             foreignKeyName: "reviews_user_id_fkey"
             columns: ["user_id"]
@@ -799,6 +616,93 @@ export type Database = {
           },
         ]
       }
+      task_approvals: {
+        Row: {
+          approval_id: string
+          approved_by_user_id: string | null
+          approving_party: string
+          created_at: string | null
+          status: string
+          task_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          approval_id?: string
+          approved_by_user_id?: string | null
+          approving_party: string
+          created_at?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          approval_id?: string
+          approved_by_user_id?: string | null
+          approving_party?: string
+          created_at?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_approvals_approved_by_user_id_fkey"
+            columns: ["approved_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "task_approvals_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["task_id"]
+          },
+        ]
+      }
+      task_feedback: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          feedback_id: string
+          feedback_type: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          feedback_id?: string
+          feedback_type: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          feedback_id?: string
+          feedback_type?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_feedback_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["task_id"]
+          },
+          {
+            foreignKeyName: "task_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           category: string | null
@@ -806,13 +710,13 @@ export type Database = {
           description: string | null
           due_date: string | null
           is_complete: boolean | null
+          lead_party: string | null
           priority: string | null
           status: string
           task_id: string
           title: string
           updated_at: string | null
-          user_id: string
-          lead_party: string | null
+          wedding_id: string | null
         }
         Insert: {
           category?: string | null
@@ -826,7 +730,7 @@ export type Database = {
           task_id?: string
           title: string
           updated_at?: string | null
-          user_id: string
+          wedding_id?: string | null
         }
         Update: {
           category?: string | null
@@ -840,17 +744,9 @@ export type Database = {
           task_id?: string
           title?: string
           updated_at?: string | null
-          user_id?: string
+          wedding_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       timeline_events: {
         Row: {
@@ -860,8 +756,10 @@ export type Database = {
           event_id: string
           event_name: string
           location: string | null
+          relevant_party: string | null
           updated_at: string | null
-          user_id: string
+          visibility: string
+          wedding_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -870,8 +768,10 @@ export type Database = {
           event_id?: string
           event_name: string
           location?: string | null
+          relevant_party?: string | null
           updated_at?: string | null
-          user_id: string
+          visibility?: string
+          wedding_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -880,18 +780,12 @@ export type Database = {
           event_id?: string
           event_name?: string
           location?: string | null
+          relevant_party?: string | null
           updated_at?: string | null
-          user_id?: string
+          visibility?: string
+          wedding_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "timeline_events_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_shortlisted_vendors: {
         Row: {
@@ -901,12 +795,13 @@ export type Database = {
           estimated_cost: number | null
           linked_vendor_id: string | null
           notes: string | null
+          owner_party: string
           status: string
           updated_at: string | null
-          user_id: string
           user_vendor_id: string
           vendor_category: string
           vendor_name: string
+          wedding_id: string | null
         }
         Insert: {
           booked_date?: string | null
@@ -915,12 +810,13 @@ export type Database = {
           estimated_cost?: number | null
           linked_vendor_id?: string | null
           notes?: string | null
+          owner_party?: string
           status?: string
           updated_at?: string | null
-          user_id: string
           user_vendor_id?: string
           vendor_category: string
           vendor_name: string
+          wedding_id?: string | null
         }
         Update: {
           booked_date?: string | null
@@ -929,12 +825,13 @@ export type Database = {
           estimated_cost?: number | null
           linked_vendor_id?: string | null
           notes?: string | null
+          owner_party?: string
           status?: string
           updated_at?: string | null
-          user_id?: string
           user_vendor_id?: string
           vendor_category?: string
           vendor_name?: string
+          wedding_id?: string | null
         }
         Relationships: [
           {
@@ -943,13 +840,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "user_shortlisted_vendors_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -963,9 +853,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           user_type: string
-          wedding_date: string | null
-          wedding_location: string | null
-          wedding_tradition: string | null
+          wedding_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -976,9 +864,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           user_type?: string
-          wedding_date?: string | null
-          wedding_location?: string | null
-          wedding_tradition?: string | null
+          wedding_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -989,11 +875,17 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           user_type?: string
-          wedding_date?: string | null
-          wedding_location?: string | null
-          wedding_tradition?: string | null
+          wedding_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["wedding_id"]
+          },
+        ]
       }
       vendor_availability: {
         Row: {
@@ -1305,7 +1197,7 @@ export type Database = {
       vendor_tasks: {
         Row: {
           assigned_staff_id: string | null
-          booking_id: string
+          booking_id: string | null
           category: string | null
           created_at: string | null
           dependency_task_id: string | null
@@ -1322,7 +1214,7 @@ export type Database = {
         }
         Insert: {
           assigned_staff_id?: string | null
-          booking_id: string
+          booking_id?: string | null
           category?: string | null
           created_at?: string | null
           dependency_task_id?: string | null
@@ -1339,7 +1231,7 @@ export type Database = {
         }
         Update: {
           assigned_staff_id?: string | null
-          booking_id?: string
+          booking_id?: string | null
           category?: string | null
           created_at?: string | null
           dependency_task_id?: string | null
@@ -1361,13 +1253,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendor_staff"
             referencedColumns: ["staff_id"]
-          },
-          {
-            foreignKeyName: "vendor_tasks_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "vendor_tasks_dependency_task_id_fkey"
@@ -1399,13 +1284,13 @@ export type Database = {
           portfolio_image_urls: Json | null
           pricing_range: Json | null
           rating: number | null
+          status: string | null
           supabase_auth_uid: string | null
           updated_at: string | null
           vendor_category: string
           vendor_id: string
           vendor_name: string
           website_url: string | null
-          status: string | null
         }
         Insert: {
           address?: Json | null
@@ -1420,13 +1305,13 @@ export type Database = {
           portfolio_image_urls?: Json | null
           pricing_range?: Json | null
           rating?: number | null
+          status?: string | null
           supabase_auth_uid?: string | null
           updated_at?: string | null
           vendor_category: string
           vendor_id?: string
           vendor_name: string
           website_url?: string | null
-          status?: string | null
         }
         Update: {
           address?: Json | null
@@ -1441,21 +1326,135 @@ export type Database = {
           portfolio_image_urls?: Json | null
           pricing_range?: Json | null
           rating?: number | null
+          status?: string | null
           supabase_auth_uid?: string | null
           updated_at?: string | null
           vendor_category?: string
           vendor_id?: string
           vendor_name?: string
           website_url?: string | null
-          status?: string | null
         }
         Relationships: []
+      }
+      wedding_members: {
+        Row: {
+          role: string
+          user_id: string
+          wedding_id: string
+        }
+        Insert: {
+          role: string
+          user_id: string
+          wedding_id: string
+        }
+        Update: {
+          role?: string
+          user_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "wedding_members_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["wedding_id"]
+          },
+        ]
+      }
+      weddings: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          status: string
+          updated_at: string | null
+          wedding_date: string | null
+          wedding_id: string
+          wedding_location: string | null
+          wedding_name: string
+          wedding_style: string | null
+          wedding_tradition: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          status?: string
+          updated_at?: string | null
+          wedding_date?: string | null
+          wedding_id?: string
+          wedding_location?: string | null
+          wedding_name: string
+          wedding_style?: string | null
+          wedding_tradition?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          status?: string
+          updated_at?: string | null
+          wedding_date?: string | null
+          wedding_id?: string
+          wedding_location?: string | null
+          wedding_name?: string
+          wedding_style?: string | null
+          wedding_tradition?: string | null
+        }
+        Relationships: []
+      }
+      workflows: {
+        Row: {
+          context_summary: Json | null
+          created_at: string | null
+          status: string
+          updated_at: string | null
+          wedding_id: string
+          workflow_id: string
+          workflow_name: string
+        }
+        Insert: {
+          context_summary?: Json | null
+          created_at?: string | null
+          status?: string
+          updated_at?: string | null
+          wedding_id: string
+          workflow_id?: string
+          workflow_name: string
+        }
+        Update: {
+          context_summary?: Json | null
+          created_at?: string | null
+          status?: string
+          updated_at?: string | null
+          wedding_id?: string
+          workflow_id?: string
+          workflow_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["wedding_id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -1476,6 +1475,62 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      reset_wedding_data: {
+        Args: { p_wedding_id: string }
+        Returns: undefined
+      }
       set_limit: {
         Args: { "": number }
         Returns: number
@@ -1488,6 +1543,42 @@ export type Database = {
         Args: { "": string }
         Returns: string[]
       }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
@@ -1498,21 +1589,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1530,14 +1625,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1553,14 +1650,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1576,14 +1675,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1591,14 +1692,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

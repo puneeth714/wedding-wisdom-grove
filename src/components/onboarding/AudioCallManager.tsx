@@ -1,18 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, PhoneCall, PhoneOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 
 const AudioCallManager: React.FC = () => {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
-  const [log, setLog] = useState<{ sender: string; message: string; timestamp: Date }[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [log, setLog] = useState<{ sender: string; message: string }[]>([]);
   const websocket = useRef<WebSocket | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
   const processor = useRef<ScriptProcessorNode | null>(null);
@@ -23,29 +14,17 @@ const AudioCallManager: React.FC = () => {
 
   const SEND_SAMPLE_RATE = 16000;
   const PLAYBACK_SAMPLE_RATE = 24000;
-  const WS_URL = 'wss://sanskara-ai-onboarding.lovableproject.com/vendor/onboard';
+  const WS_URL = 'ws://localhost:8765/vendor/onboard';
 
   const logMessage = (sender: string, message: string) => {
-    setLog(prev => [...prev, { sender, message, timestamp: new Date() }].slice(-10)); // Keep last 10 messages
+    setLog(prev => [...prev, { sender, message }]);
   };
 
-  const startCall = async () => {
-    setIsConnecting(true);
-    setConnectionStatus('connecting');
-    logMessage('System', 'Initializing audio call...');
-    
+  const startOnboarding = async () => {
+    logMessage('System', 'Initializing...');
     try {
-      // Request microphone permission
-      mediaStream.current = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: SEND_SAMPLE_RATE
-        } 
-      });
+      mediaStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Initialize audio context
       if (!audioContext.current || audioContext.current.state === 'closed') {
         audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
@@ -53,14 +32,11 @@ const AudioCallManager: React.FC = () => {
         await audioContext.current.resume();
       }
 
-      // Connect to WebSocket
       websocket.current = new WebSocket(WS_URL);
 
       websocket.current.onopen = () => {
-        setConnectionStatus('connected');
-        setIsConnected(true);
-        setIsConnecting(false);
-        logMessage('System', 'Connected! AI assistant is ready to help with your profile.');
+        logMessage('System', 'Connection established. You can start speaking.');
+        setIsRecording(true);
         
         const source = audioContext.current!.createMediaStreamSource(mediaStream.current!);
         processor.current = audioContext.current!.createScriptProcessor(4096, 1, 1);
@@ -69,7 +45,7 @@ const AudioCallManager: React.FC = () => {
         processor.current.connect(audioContext.current!.destination);
 
         processor.current.onaudioprocess = (e) => {
-          if (websocket.current?.readyState !== WebSocket.OPEN || isMuted) return;
+          if (websocket.current?.readyState !== WebSocket.OPEN) return;
           const inputData = e.inputBuffer.getChannelData(0);
           const downsampled = downsampleBuffer(inputData, audioContext.current!.sampleRate, SEND_SAMPLE_RATE);
           const pcm16 = toPcm16(downsampled);
@@ -80,83 +56,42 @@ const AudioCallManager: React.FC = () => {
 
       websocket.current.onmessage = (event) => {
         const message = JSON.parse(event.data);
-        if (message.type === 'audio' && message.data && isSpeakerOn) {
+        if (message.type === 'audio' && message.data) {
           const audioData = _base64ToArrayBuffer(message.data);
           audioQueue.current.push(audioData);
           if (!isPlaying.current) {
             playNextInQueue();
           }
         } else if (message.type === 'text') {
-          logMessage('AI Assistant', message.data);
+          logMessage('Agent (Transcription)', message.data);
         } else if (message.type === 'interrupted') {
           interruptPlayback();
-        } else if (message.type === 'profile_updated') {
-          logMessage('System', 'Profile information updated successfully!');
         }
       };
 
       websocket.current.onclose = () => {
-        logMessage('System', 'Call ended.');
-        stopCall();
+        logMessage('System', 'Connection closed.');
+        stopStreaming();
       };
 
       websocket.current.onerror = (error) => {
         console.error('WebSocket Error:', error);
-        logMessage('System', 'Connection error occurred. Please try again.');
-        setConnectionStatus('error');
-        stopCall();
+        logMessage('System', 'A WebSocket error occurred.');
+        stopStreaming();
       };
 
     } catch (err) {
-      console.error('Error starting call:', err);
-      logMessage('System', 'Could not access microphone. Please grant permission and try again.');
-      setConnectionStatus('error');
-      setIsConnecting(false);
+      console.error('Error starting onboarding:', err);
+      logMessage('System', 'Could not start. Please grant microphone permission and try again.');
     }
   };
 
-  const stopCall = () => {
+  const stopOnboarding = () => {
     if (websocket.current) {
       websocket.current.close();
     }
-    
-    if (mediaStream.current) {
-      mediaStream.current.getTracks().forEach(track => track.stop());
-      mediaStream.current = null;
-    }
-    
-    if (processor.current) {
-      processor.current.disconnect();
-      processor.current = null;
-    }
-    
-    if (audioContext.current) {
-      audioContext.current.close();
-      audioContext.current = null;
-    }
-    
-    interruptPlayback();
-    setIsConnected(false);
-    setIsConnecting(false);
-    setConnectionStatus('disconnected');
-    setIsMuted(false);
-    logMessage('System', 'Call disconnected.');
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    logMessage('System', isMuted ? 'Microphone enabled' : 'Microphone muted');
-  };
-
-  const toggleSpeaker = () => {
-    setIsSpeakerOn(!isSpeakerOn);
-    if (!isSpeakerOn) {
-      interruptPlayback();
-    }
-    logMessage('System', isSpeakerOn ? 'Speaker muted' : 'Speaker enabled');
-  };
-
-  // Helper functions for audio processing
   const playNextInQueue = async () => {
     if (audioQueue.current.length === 0) {
       isPlaying.current = false;
@@ -197,7 +132,7 @@ const AudioCallManager: React.FC = () => {
       isPlaying.current = false;
       setTimeout(playNextInQueue, 100);
     }
-  };
+  }
 
   const interruptPlayback = () => {
     if (currentSource.current) {
@@ -211,7 +146,24 @@ const AudioCallManager: React.FC = () => {
     }
     audioQueue.current = [];
     isPlaying.current = false;
-  };
+  }
+
+  const stopStreaming = () => {
+    if (mediaStream.current) {
+      mediaStream.current.getTracks().forEach(track => track.stop());
+      mediaStream.current = null;
+    }
+    if (processor.current) {
+      processor.current.disconnect();
+      processor.current = null;
+    }
+    if (audioContext.current) {
+      audioContext.current.close();
+      audioContext.current = null;
+    }
+    interruptPlayback();
+    setIsRecording(false);
+  }
 
   const downsampleBuffer = (buffer: Float32Array, inputSampleRate: number, outputSampleRate: number) => {
     if (outputSampleRate === inputSampleRate) {
@@ -234,7 +186,7 @@ const AudioCallManager: React.FC = () => {
       offsetBuffer = nextOffsetBuffer;
     }
     return result;
-  };
+  }
 
   const toPcm16 = (input: Float32Array) => {
     const buffer = new ArrayBuffer(input.length * 2);
@@ -244,7 +196,7 @@ const AudioCallManager: React.FC = () => {
       view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     }
     return new Uint8Array(buffer);
-  };
+  }
   
   const _base64ToArrayBuffer = (base64: string) => {
     const binaryString = atob(base64);
@@ -254,96 +206,29 @@ const AudioCallManager: React.FC = () => {
       bytes[i] = binaryString.charCodeAt(i);
     }
     return bytes.buffer;
-  };
+  }
 
   useEffect(() => {
     return () => {
-      stopCall();
+      stopStreaming();
     };
   }, []);
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>AI Onboarding Call</span>
-          <Badge variant={connectionStatus === 'connected' ? 'default' : connectionStatus === 'error' ? 'destructive' : 'secondary'}>
-            {connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1)}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Call Controls */}
-        <div className="flex justify-center space-x-4">
-          {!isConnected && !isConnecting && (
-            <Button onClick={startCall} className="flex items-center gap-2" size="lg">
-              <PhoneCall className="w-5 h-5" />
-              Start Call
-            </Button>
-          )}
-          
-          {isConnecting && (
-            <Button disabled className="flex items-center gap-2" size="lg">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Connecting...
-            </Button>
-          )}
-          
-          {isConnected && (
-            <>
-              <Button 
-                onClick={toggleMute} 
-                variant={isMuted ? "destructive" : "outline"}
-                size="lg"
-              >
-                {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </Button>
-              
-              <Button 
-                onClick={toggleSpeaker} 
-                variant={!isSpeakerOn ? "destructive" : "outline"}
-                size="lg"
-              >
-                {isSpeakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </Button>
-              
-              <Button onClick={stopCall} variant="destructive" size="lg">
-                <PhoneOff className="w-5 h-5" />
-              </Button>
-            </>
-          )}
-        </div>
-
-        {connectionStatus === 'error' && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              Connection failed. Please check your internet connection and try again.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Call Log */}
-        <Separator />
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm">Call Activity</h4>
-          <div className="max-h-40 overflow-y-auto space-y-2 bg-muted/50 p-3 rounded-md">
-            {log.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center">No activity yet</p>
-            ) : (
-              log.map((entry, index) => (
-                <div key={index} className="text-sm">
-                  <span className="font-medium text-primary">{entry.sender}:</span>{' '}
-                  <span className="text-foreground">{entry.message}</span>
-                  <div className="text-xs text-muted-foreground">
-                    {entry.timestamp.toLocaleTimeString()}
-                  </div>
-                </div>
-              ))
-            )}
+    <div className="p-4">
+      <div className="flex justify-center mb-4">
+        <Button onClick={startOnboarding} disabled={isRecording}>Start Onboarding</Button>
+        <Button onClick={stopOnboarding} disabled={!isRecording}>Stop Onboarding</Button>
+      </div>
+      <div className="w-full h-64 border rounded p-2 overflow-y-auto bg-gray-50">
+        {log.map((entry, index) => (
+          <div key={index} className="mb-2">
+            <span className="font-bold">{`[${entry.sender}]: `}</span>
+            <span>{entry.message}</span>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </div>
   );
 };
 

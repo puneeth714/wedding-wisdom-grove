@@ -57,6 +57,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isLoadingUserType: boolean;
   vendorProfile: VendorProfile | null;
   staffProfile: StaffProfile | null;
   userType: 'vendor' | 'staff' | 'customer' | null;
@@ -82,6 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userType, setUserType] = useState<'vendor' | 'staff' | 'customer' | null>(null);
   const [isLoadingVendorProfile, setIsLoadingVendorProfile] = useState(false);
   const [isLoadingStaffProfile, setIsLoadingStaffProfile] = useState(false);
+  const [isLoadingUserType, setIsLoadingUserType] = useState(false);
   const navigate = useNavigate();
 
   // Fetch vendor profile data
@@ -119,9 +121,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           status: data.status || undefined,
         };
         
-        if (JSON.stringify(profile) !== JSON.stringify(vendorProfile)) {
-          setVendorProfile(profile);
-        }
+        setVendorProfile(profile);
       } else {
         setVendorProfile(null);
       }
@@ -188,24 +188,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      const currentUserId = user?.id;
+      const newUserId = newSession?.user?.id;
+      const currentAccessToken = session?.access_token;
+      const newAccessToken = newSession?.access_token;
+
+      // Only update state if the user ID or access token has actually changed,
+      // or if it's a SIGNED_OUT event (which always implies a change)
+      if (currentUserId !== newUserId || currentAccessToken !== newAccessToken || _event === 'SIGNED_OUT') {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+      }
       setIsLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      const currentUserId = user?.id;
+      const newUserId = initialSession?.user?.id;
+      const currentAccessToken = session?.access_token;
+      const newAccessToken = initialSession?.access_token;
+
+      if (currentUserId !== newUserId || currentAccessToken !== newAccessToken) {
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+      }
       setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [user, session]); // Add user and session to dependencies for the comparison to work correctly
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      if (user) {
+      if (!user) {
+        setUserType(null);
+        return;
+      }
+
+      setIsLoadingUserType(true);
+      try {
         const { data: userProfile, error: userProfileError } = await supabase
           .from('users')
           .select('user_type')
@@ -214,19 +236,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (userProfileError) {
           console.error('Error fetching user profile:', userProfileError);
-          setUserType('customer'); // Default to customer if profile fetch fails
+          // Don't sign out on temporary errors
+          if (userProfileError.code === 'PGRST116') {
+            // Record not found - this is a serious error
+            await signOut();
+          }
           return;
         }
 
-        if (userProfile?.user_type === 'vendor_staff' || userProfile?.user_type === 'staff') { // Handle both 'staff' and 'vendor_staff' as staff
+        // Set user type and fetch corresponding profile
+        if (userProfile?.user_type === 'vendor_staff' || userProfile?.user_type === 'staff') {
           setUserType('staff');
           await fetchStaffProfile(user.id);
         } else if (userProfile?.user_type === 'vendor') {
           setUserType('vendor');
           await fetchVendorProfile(user.id);
+          // Also fetch staff profile for vendor owners
+          await fetchStaffProfile(user.id);
         } else {
           setUserType('customer');
         }
+      } catch (error) {
+        console.error('Error in fetchUserRole:', error);
+        // Only sign out on critical errors
+        if (error instanceof Error && error.message.includes('not found')) {
+          await signOut();
+        }
+      } finally {
+        setIsLoadingUserType(false);
       }
     };
     fetchUserRole();
@@ -235,15 +272,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!isLoading && user) {
       if (userType === 'vendor' && vendorProfile) {
-        if (!vendorProfile.is_active && location.pathname !== '/onboarding') {
+        if (!vendorProfile.is_active && location.pathname !== '/onboarding' && location.pathname !== '/manual-vendor-onboarding') {
           navigate('/onboarding');
-        } else if (vendorProfile.is_active && location.pathname === '/onboarding') {
+        } else if (vendorProfile.is_active && (location.pathname === '/onboarding' || location.pathname === '/manual-vendor-onboarding')) {
           navigate('/dashboard');
         }
       } else if (userType === 'staff' && staffProfile) {
-        if (!staffProfile.is_active && location.pathname !== '/staff/onboarding') {
+        if (staffProfile.invitation_status === 'pending' && location.pathname !== '/staff/onboarding') {
           navigate('/staff/onboarding');
-        } else if (staffProfile.is_active && location.pathname === '/staff/onboarding') {
+        } else if (staffProfile.invitation_status === 'accepted' && location.pathname === '/staff/onboarding') {
           navigate('/staff/dashboard');
         }
       }
@@ -299,7 +336,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "Welcome back!",
       });
 
-      navigate('/');
+      // Determine redirection based on userType
+      if (userProfile?.user_type === 'vendor') {
+        navigate('/dashboard');
+      } else if (userProfile?.user_type === 'vendor_staff' || userProfile?.user_type === 'staff') {
+        navigate('/staff/dashboard');
+      } else {
+        // Default redirection for other user types or if user_type is not set
+        navigate('/');
+      }
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -410,6 +455,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 email: data.user.email,
                 phone_number: metadata.phone_number,
                 role: metadata.role,
+                invitation_status: 'pending',
               });
 
             if (staffError) throw staffError;
@@ -457,6 +503,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       setIsLoading(true);
+      
+      // Clear all local storage and session storage
+      localStorage.clear();
+      sessionStorage.clear();
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session) {
@@ -465,15 +515,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: "You are already logged out.",
           variant: "destructive",
         });
-        navigate('/login'); // Reverted: navigate to login if no session
+        window.location.href = '/login';
         return;
       }
 
+      // Sign out from Supabase
       await supabase.auth.signOut();
-      navigate('/login');
+
+      // Reset all states
+      setUser(null);
+      setUserType(null);
+      setVendorProfile(null);
+      setStaffProfile(null);
+
+      // Clear any cached data
+      localStorage.removeItem('vendorProfile');
+      localStorage.removeItem('staffProfile');
+      localStorage.removeItem('userType');
+
+      window.location.href = '/login';
       toast({
         title: "Logged out",
-        description: "You have been successfully logged out",
+        description: "You have been logged out for security reasons",
+        variant: "destructive",
       });
     } catch (error: any) {
       toast({
@@ -491,6 +555,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user,
       session,
       isLoading,
+      isLoadingUserType,
       vendorProfile,
       staffProfile,
       userType,
