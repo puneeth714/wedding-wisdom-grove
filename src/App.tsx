@@ -35,6 +35,8 @@ import StaffVendorServicesPage from './pages/StaffVendorServicesPage';
 import StaffNotifications from './pages/StaffNotifications';
 import StaffProfile from './pages/StaffProfile';
 import StaffSettings from './pages/StaffSettings';
+import VendorAiOnboarding from './pages/VendorAiOnboarding';
+import StaffAiOnboarding from './pages/StaffAiOnboarding';
 
 function App() {
   const { user, isLoading, userType } = useAuth();
@@ -86,6 +88,7 @@ function App() {
 
         {/* Protected Staff Routes - All staff routes must be under /staff/ */}
         <Route element={<StaffProtectedRoute />}>
+          <Route path="/staff/ai-onboarding" element={<StaffAiOnboarding />} />
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
           <Route path="/staff/onboarding" element={<StaffOnboarding />} />
           <Route path="/staff/reset-password" element={<StaffResetPassword />} />
@@ -96,6 +99,11 @@ function App() {
           <Route path="/staff/notifications" element={<StaffNotifications />} />
           <Route path="/staff/profile" element={<StaffProfile />} />
           <Route path="/staff/settings" element={<StaffSettings />} />
+        </Route>
+
+        {/* AI Onboarding Routes (Protected) */}
+        <Route element={<ProtectedRoute><></></ProtectedRoute>}>
+          <Route path="/ai-onboarding" element={<VendorAiOnboarding />} />
         </Route>
 
         {/* Protected Vendor Routes */}
