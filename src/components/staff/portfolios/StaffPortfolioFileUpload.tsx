@@ -64,17 +64,13 @@ const StaffPortfolioFileUpload: React.FC<StaffPortfolioFileUploadProps> = ({
       </Label>
       
       <TaggedImageUploader
-        vendorId={vendorId}
-        staffId={staffId}
-        portfolioType={portfolioType}
-        currentTaggedImages={currentTaggedImages}
-        onFilesUploaded={onFilesUploaded}
-        onFileRemoved={onFileRemoved}
-        fileType={fileType}
-        maxFiles={maxFiles}
-        maxFileSizeMb={maxFileSizeMb}
-        bucketName={bucketName}
+        taggedImages={currentTaggedImages}
+        onImagesChange={handleImagesChange}
+        bucket="vendor-images"
         folderPath={`${vendorId}/${staffId}/portfolio/${portfolioType}`}
+        category={portfolioType}
+        disabled={isUploading}
+        maxFilesPerTag={maxFiles}
       />
 
       {uploadError && (

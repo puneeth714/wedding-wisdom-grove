@@ -91,15 +91,20 @@ const Reviews: React.FC = () => {
             
           let serviceName = "Unknown Service";
           
-          if (bookingData?.booking_services && bookingData.booking_services.length > 0) {
-            const { data: serviceData } = await supabase
-              .from('vendor_services')
-              .select('service_name')
-              .eq('service_id', bookingData.booking_services[0].vendor_service_id)
-              .single();
+          if (bookingData?.booking_services && Array.isArray(bookingData.booking_services) && bookingData.booking_services.length > 0) {
+            const firstService = bookingData.booking_services[0];
+            const serviceId = typeof firstService === 'object' && firstService !== null ? firstService.vendor_service_id : null;
+            
+            if (serviceId) {
+              const { data: serviceData } = await supabase
+                .from('vendor_services')
+                .select('service_name')
+                .eq('service_id', serviceId)
+                .single();
               
-            if (serviceData) {
-              serviceName = serviceData.service_name;
+              if (serviceData) {
+                serviceName = serviceData.service_name;
+              }
             }
           }
           

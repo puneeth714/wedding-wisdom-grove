@@ -69,29 +69,69 @@ const StaffBookings: React.FC = () => {
     setError(null);
     try {
       // Fetch bookings that have tasks assigned to this staff member
+      // First get all bookings for the vendor
+      const { data: staffData } = await supabase
+        .from('vendor_staff')
+        .select('vendor_id')
+        .eq('staff_id', staffProfile.staff_id)
+        .single();
+
+      if (!staffData) {
+        setBookings([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get all bookings for this vendor with tasks assigned to this staff
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('vendor_tasks')
+        .select('booking_id')
+        .eq('assigned_staff_id', staffProfile.staff_id)
+        .eq('vendor_id', staffData.vendor_id);
+
+      if (tasksError) throw tasksError;
+
+      const bookingIds = [...new Set(tasksData?.map(t => t.booking_id).filter(Boolean))] as string[];
+
+      if (bookingIds.length === 0) {
+        setBookings([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
-          booking_id, 
-          event_date, 
-          booking_status, 
-          total_amount, 
+          booking_id,
+          event_date,
+          booking_status,
+          total_amount,
           notes_for_vendor,
           created_at,
-          users ( display_name, email ),
-          vendor_tasks!inner (
-            vendor_task_id,
-            title,
-            description,
-            status,
-            priority
-          )
+          users ( display_name, email )
         `)
-        .eq('vendor_tasks.assigned_staff_id', staffProfile.staff_id)
+        .in('booking_id', bookingIds)
         .order('event_date', { ascending: false });
 
       if (bookingsError) throw bookingsError;
-      setBookings(bookingsData as TaskBooking[] || []);
+
+      // Fetch tasks for each booking
+      const bookingsWithTasks = await Promise.all(
+        (bookingsData || []).map(async (booking) => {
+          const { data: tasks } = await supabase
+            .from('vendor_tasks')
+            .select('vendor_task_id, title, description, status, priority')
+            .eq('booking_id', booking.booking_id)
+            .eq('assigned_staff_id', staffProfile.staff_id);
+
+          return {
+            ...booking,
+            vendor_tasks: tasks || []
+          };
+        })
+      );
+
+      setBookings(bookingsWithTasks as TaskBooking[]);
 
     } catch (fetchError: any) {
       console.error('Error fetching staff bookings:', fetchError);
